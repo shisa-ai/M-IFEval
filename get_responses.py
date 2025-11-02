@@ -97,6 +97,62 @@ class OpenaiResponseGenerator(ResponseGenerator):
             self.get_single_response(input_text) for input_text in tqdm(input_texts)
         ]
 
+######## vLLM Server (OpenAI-compatible API) ########
+
+class VllmServerResponseGenerator(ResponseGenerator):
+    def __init__(self, model_name, base_url="http://localhost:8000/v1", api_key="EMPTY"):
+        from openai import OpenAI
+
+        # Allow passing base_url and api_key via environment variables
+        self.base_url = os.environ.get("VLLM_BASE_URL", base_url)
+        self.api_key = os.environ.get("VLLM_API_KEY", api_key)
+
+        self.openai_client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key
+        )
+        self.model_name = model_name
+
+    def get_single_response(self, input_text):
+        try:
+            return self.openai_client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": input_text
+                            }
+                        ]
+                    }
+                ],
+                temperature=0,
+                max_tokens=2048,
+            ).choices[0].message.content
+        except Exception as e:
+            print(e)
+            return None
+
+    def get_response(self, input_texts):
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        responses = [None] * len(input_texts)
+        with ThreadPoolExecutor(max_workers=15) as executor:
+            # Submit all tasks and map them to their indices
+            future_to_idx = {
+                executor.submit(self.get_single_response, text): idx
+                for idx, text in enumerate(input_texts)
+            }
+
+            # Process completed futures with progress bar
+            for future in tqdm(as_completed(future_to_idx), total=len(input_texts)):
+                idx = future_to_idx[future]
+                responses[idx] = future.result()
+
+        return responses
+
 ######## VertexAI ########
 
 # TO DO: Add Support for VertexAI
@@ -179,7 +235,10 @@ SUPPORTED_MODELS = {
     'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4': 'vllm',
     'hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4': 'vllm',
     'mistralai/Mistral-7B-Instruct-v0.3': 'vllm',
-    'deepseek-ai/deepseek-llm-7b-chat': 'vllm'
+    'deepseek-ai/deepseek-llm-7b-chat': 'vllm',
+    'shisa-ai/chotto-14b-20250922-W8A8-INT8-smooth': 'vllm_server',
+    'Unbabel/Tower-Plus-9B': 'vllm_server',
+    'shisa-ai/shisa-v2-unphi4-14b-denoted-W8A8-INT8': 'vllm_server'
 }
 
 MODEL_CLASS_DICT = {
@@ -187,18 +246,27 @@ MODEL_CLASS_DICT = {
     "anthropic": AnthropicResponseGenerator,
     # "gemini": VertexResponseGenerator,
     "vllm": VllmResponseGenerator,
+    "vllm_server": VllmServerResponseGenerator,
 }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--languages", type=str, default=None,
+                        help="Comma-separated list of language codes (e.g., 'ja' or 'ja,en,es,fr'). If not specified, all languages will be processed.")
     args = parser.parse_args()
 
     model_name = args.model_name
 
     assert model_name in SUPPORTED_MODELS, f"Model {model_name} not supported, update SUPPORTED_MODELS dictionary in get_responses.py to support it."
 
+    # Get all input data files
     paths = sorted(glob("./data/*_input_data.jsonl"))
+
+    # Filter by language if specified
+    if args.languages:
+        lang_codes = [lang.strip() for lang in args.languages.split(",")]
+        paths = [p for p in paths for lang in lang_codes if f"/{lang}_input_data.jsonl" in p]
 
     model_class = MODEL_CLASS_DICT[SUPPORTED_MODELS[model_name]]
     response_generator = model_class(model_name)
