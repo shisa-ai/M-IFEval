@@ -1,2 +1,8 @@
+# Track large model response files with Git LFS
 data/*_response_data_*.jsonl filter=lfs diff=lfs merge=lfs -text
+
+# Track large answer files with Git LFS
 scores/*_answers.jsonl filter=lfs diff=lfs merge=lfs -text
+# Keep test input data and score summaries in regular git (they're small)
+# data/*_input_data.jsonl - regular git
+# scores/*_scores.json - regular git

@@ -24,7 +24,7 @@ model:
   client:
     # Base URL for the OpenAI-compatible endpoint. Override per model if you
     # need to hit different services (e.g., local vs hosted variants).
-    base_url: http://localhost:9000/v1
+    base_url: http://localhost:8000/v1
 
     # Environment variable supplying the API key. Leave unset for keyless local
     # endpoints, or override per model if a different credential is required.

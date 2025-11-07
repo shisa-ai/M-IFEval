@@ -226,7 +226,7 @@ def write_answers(output_dir, model_name, outputs):
         "follow_all_instructions": o.follow_all_instructions,
         "follow_instruction_list": o.follow_instruction_list,
       }
-      f.write(json.dumps(answer_data))
+      f.write(json.dumps(answer_data, ensure_ascii=False))
       f.write("\n")
 
   logging.info("Saved answers to: %s", answers_file)
@@ -323,7 +323,7 @@ def write_scores(output_dir, model_name, strict_scores, loose_scores):
   }
 
   with open(scores_file, "w", encoding='utf-8') as f:
-    json.dump(combined_scores, f, indent=2)
+    json.dump(combined_scores, f, indent=2, ensure_ascii=False)
 
   logging.info("Saved scores to: %s", scores_file)
   return scores_file
