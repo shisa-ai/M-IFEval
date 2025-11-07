@@ -2,10 +2,11 @@
 """Interactive Textual TUI for browsing M-IFEval instruction-following evaluation results.
 
 USAGE:
-    pip install textual  # Install dependency first
-    python mifeval-viewer.py <language>
+    # Auto-detect language (if only one is available)
+    python mifeval-viewer.py
 
-    Languages: en, ja, es, fr
+    # Or specify a language explicitly when multiple are available
+    python mifeval-viewer.py --language ja
 
 FEATURES:
 - Browse model responses and instruction-following results for a specific language
@@ -186,6 +187,21 @@ class ModelData:
         return acc * 100 if acc is not None else None
 
 
+def detect_available_languages(scores_dir: Path) -> List[str]:
+    """Detect which languages have data in the scores directory"""
+    available_langs = set()
+
+    for answers_file in scores_dir.glob("*_input_*_answers.jsonl"):
+        # Extract language from filename pattern: {lang}_input_{model}_answers.jsonl
+        filename = answers_file.stem
+        for lang in LANGUAGES:
+            if filename.startswith(f"{lang}_input_"):
+                available_langs.add(lang)
+                break
+
+    return sorted(available_langs)
+
+
 def list_models_in_language(language: str, scores_dir: Path) -> List[str]:
     """List all models that have answers for the specified language"""
     models = set()
@@ -227,7 +243,7 @@ def load_model_data(
         instruction_record = InstructionRecord(
             index=idx,
             prompt=record.get("prompt", ""),
-            response=record.get("response", ""),
+            response=record.get("response") or "",  # Handle None responses
             instruction_ids=record.get("instruction_id_list", []),
             follow_all_instructions=record.get("follow_all_instructions", False),
             follow_instruction_list=record.get("follow_instruction_list", []),
@@ -289,6 +305,9 @@ def build_record_renderable(record: InstructionRecord, compact: bool = False) ->
 
     # Response
     response_text = truncate_text(record.response, 400) if compact else record.response
+    # Handle None responses (defensive check)
+    if response_text is None:
+        response_text = "[No response generated]"
     table.add_row("Response", "|", Text(response_text, style="cyan"))
 
     # Instructions section
@@ -321,17 +340,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         description="Interactive viewer for M-IFEval instruction-following evaluation results."
     )
     parser.add_argument(
-        "language",
+        "--language",
         choices=LANGUAGES,
-        help="Language to view (en, ja, es, fr)"
+        help="Language to view (en, ja, es, fr). If not specified, auto-detects from available data."
     )
-    parser.add_argument("--model", help="Model name to preselect (safe or display name)")
-    parser.add_argument("--scores-dir", type=Path, default=SCORES_DIR, help="Path to scores directory")
-    parser.add_argument("--mode", choices=["strict", "loose"], default="strict", help="Evaluation mode (default: strict)")
     args = parser.parse_args(argv)
 
-    language = args.language
-    scores_dir = args.scores_dir
+    scores_dir = SCORES_DIR
 
     # Check for textual
     if App is None or TEXTUAL_IMPORT_ERROR is not None:
@@ -340,19 +355,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print(f"Import error: {TEXTUAL_IMPORT_ERROR}")
         return 1
 
+    # Auto-detect language if not specified
+    language = args.language
+    if language is None:
+        available_langs = detect_available_languages(scores_dir)
+        if not available_langs:
+            print(f"No evaluation data found in {scores_dir}")
+            return 1
+        elif len(available_langs) == 1:
+            language = available_langs[0]
+            print(f"Auto-detected language: {language}")
+        else:
+            print(f"Multiple languages available: {', '.join(available_langs)}")
+            print(f"Please specify one with --language <lang>")
+            return 1
+
     # Check if any data exists for this language
     model_names = list_models_in_language(language, scores_dir)
     if not model_names:
+        available_langs = detect_available_languages(scores_dir)
         print(f"No models found for language '{language}' in {scores_dir}")
-        print(f"Available languages: {', '.join(LANGUAGES)}")
+        if available_langs:
+            print(f"Available languages: {', '.join(available_langs)}")
         return 1
 
     app = MIFEvalViewerApp(
         language=language,
         model_names=model_names,
         scores_dir=scores_dir,
-        preselect_model=args.model,
-        initial_mode=args.mode,
     )
     app.run()
     return 0
@@ -435,18 +465,14 @@ if App is not None:
             language: str,
             model_names: List[str],
             scores_dir: Path,
-            preselect_model: Optional[str] = None,
-            initial_mode: str = "strict",
         ) -> None:
             super().__init__()
             self.language = language
             self.model_names = model_names
             self.scores_dir = scores_dir
-            self.preselect_model = preselect_model
             self.models: List[ModelData] = []
             self.selected_model: Optional[ModelData] = None
             self._is_mounted = False
-            self.eval_mode = initial_mode
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
@@ -555,26 +581,9 @@ if App is not None:
             for model in filtered_models:
                 model_list.append(ModelListItem(model, mode=self.eval_mode))
 
-            # Preselect model if specified
-            if self.preselect_model and not self.search_query:
-                index = self._find_model_index(self.preselect_model, filtered_models)
-            else:
-                index = 0
-
-            index = max(0, min(index, len(filtered_models) - 1))
+            # Select first model by default
             if filtered_models:
-                model_list.index = index
-
-        def _find_model_index(self, target: Optional[str], models: Optional[List[ModelData]] = None) -> int:
-            if not target:
-                return 0
-            if models is None:
-                models = self.models
-            target_lower = target.lower()
-            for idx, model in enumerate(models):
-                if model.safe_name.lower() == target_lower or model.display_name.lower() == target_lower:
-                    return idx
-            return 0
+                model_list.index = 0
 
         def _select_model(self, model: Optional[ModelData]) -> None:
             """Select a model and show its instruction-following results"""

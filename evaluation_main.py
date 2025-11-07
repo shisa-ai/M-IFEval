@@ -93,7 +93,8 @@ def write_outputs(output_jsonl_filename, outputs):
                   for attr_name in [
                       name for name in dir(o) if not name.startswith("_")
                   ]
-              }
+              },
+              ensure_ascii=False
           )
       )
       f.write("\n")
