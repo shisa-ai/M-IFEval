@@ -97,15 +97,16 @@ class OpenaiResponseGenerator(ResponseGenerator):
             self.get_single_response(input_text) for input_text in tqdm(input_texts)
         ]
 
-######## vLLM Server (OpenAI-compatible API) ########
+######## OpenAI-Compatible API (vLLM, Together AI, etc.) ########
 
-class VllmServerResponseGenerator(ResponseGenerator):
+class OpenaiCompatibleResponseGenerator(ResponseGenerator):
     def __init__(self, model_name, base_url="http://localhost:8000/v1", api_key="EMPTY"):
         from openai import OpenAI
 
         # Allow passing base_url and api_key via environment variables
-        self.base_url = os.environ.get("VLLM_BASE_URL", base_url)
-        self.api_key = os.environ.get("VLLM_API_KEY", api_key)
+        # VLLM_* env vars kept for backwards compatibility
+        self.base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL", os.environ.get("VLLM_BASE_URL", base_url))
+        self.api_key = os.environ.get("OPENAI_COMPATIBLE_API_KEY", os.environ.get("VLLM_API_KEY", api_key))
 
         self.openai_client = OpenAI(
             base_url=self.base_url,
@@ -236,9 +237,9 @@ SUPPORTED_MODELS = {
     'hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4': 'vllm',
     'mistralai/Mistral-7B-Instruct-v0.3': 'vllm',
     'deepseek-ai/deepseek-llm-7b-chat': 'vllm',
-    'shisa-ai/chotto-14b-20250922-W8A8-INT8-smooth': 'vllm_server',
-    'Unbabel/Tower-Plus-9B': 'vllm_server',
-    'shisa-ai/shisa-v2-unphi4-14b-denoted-W8A8-INT8': 'vllm_server'
+    'shisa-ai/chotto-14b-20250922-W8A8-INT8-smooth': 'openai_compatible',
+    'Unbabel/Tower-Plus-9B': 'openai_compatible',
+    'shisa-ai/shisa-v2-unphi4-14b-denoted-W8A8-INT8': 'openai_compatible'
 }
 
 MODEL_CLASS_DICT = {
@@ -246,19 +247,27 @@ MODEL_CLASS_DICT = {
     "anthropic": AnthropicResponseGenerator,
     # "gemini": VertexResponseGenerator,
     "vllm": VllmResponseGenerator,
-    "vllm_server": VllmServerResponseGenerator,
+    "openai_compatible": OpenaiCompatibleResponseGenerator,
 }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--provider", type=str, default=None,
+                        help="Provider type (openai, anthropic, vllm, openai_compatible). If not specified, will look up in SUPPORTED_MODELS.")
     parser.add_argument("--languages", type=str, default=None,
                         help="Comma-separated list of language codes (e.g., 'ja' or 'ja,en,es,fr'). If not specified, all languages will be processed.")
     args = parser.parse_args()
 
     model_name = args.model_name
 
-    assert model_name in SUPPORTED_MODELS, f"Model {model_name} not supported, update SUPPORTED_MODELS dictionary in get_responses.py to support it."
+    # Determine provider type
+    if args.provider:
+        provider_type = args.provider
+        assert provider_type in MODEL_CLASS_DICT, f"Provider {provider_type} not supported. Available providers: {list(MODEL_CLASS_DICT.keys())}"
+    else:
+        assert model_name in SUPPORTED_MODELS, f"Model {model_name} not supported, update SUPPORTED_MODELS dictionary in get_responses.py to support it, or use --provider flag."
+        provider_type = SUPPORTED_MODELS[model_name]
 
     # Get all input data files
     paths = sorted(glob("./data/*_input_data.jsonl"))
@@ -268,7 +277,7 @@ if __name__ == "__main__":
         lang_codes = [lang.strip() for lang in args.languages.split(",")]
         paths = [p for p in paths for lang in lang_codes if f"/{lang}_input_data.jsonl" in p]
 
-    model_class = MODEL_CLASS_DICT[SUPPORTED_MODELS[model_name]]
+    model_class = MODEL_CLASS_DICT[provider_type]
     response_generator = model_class(model_name)
 
     for path in paths:

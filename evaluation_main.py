@@ -199,9 +199,41 @@ def read_prompt_to_response_dict(input_jsonl_filename):
   return return_dict
 
 
-def print_report(outputs):
-  """Prints a report on accuracy scores."""
+def get_safe_model_name(input_response_data_path):
+  """Extract model name from response data path and make it safe for filenames."""
+  # Extract filename from path
+  filename = os.path.basename(input_response_data_path)
+  # Remove extension and 'response_data_' prefix if present
+  model_name = filename.replace('.jsonl', '').replace('response_data_', '')
+  # Replace / with __ for safe filenames
+  safe_name = model_name.replace('/', '__')
+  return safe_name
 
+
+def write_answers(output_dir, model_name, outputs):
+  """Writes answer data (without scores) to jsonl."""
+  scores_dir = "scores"
+  os.makedirs(scores_dir, exist_ok=True)
+
+  answers_file = os.path.join(scores_dir, f"{model_name}_answers.jsonl")
+  with open(answers_file, "w", encoding='utf-8') as f:
+    for o in outputs:
+      answer_data = {
+        "instruction_id_list": o.instruction_id_list,
+        "prompt": o.prompt,
+        "response": o.response,
+        "follow_all_instructions": o.follow_all_instructions,
+        "follow_instruction_list": o.follow_instruction_list,
+      }
+      f.write(json.dumps(answer_data))
+      f.write("\n")
+
+  logging.info("Saved answers to: %s", answers_file)
+  return answers_file
+
+
+def calculate_scores(outputs):
+  """Calculates accuracy scores and returns them as a dictionary."""
   prompt_total = 0
   prompt_correct = 0
   instruction_total = 0
@@ -239,16 +271,61 @@ def print_report(outputs):
       if followed_or_not:
         tier1_correct[instruction_id] += 1
 
-  print(f"prompt-level: {prompt_correct / prompt_total}")
-  print(f"instruction-level: {instruction_correct / instruction_total}")
+  # Calculate accuracies
+  tier0_scores = {
+    instruction_id: tier0_correct[instruction_id] / tier0_total[instruction_id]
+    for instruction_id in tier0_total.keys()
+  }
+
+  tier1_scores = {
+    instruction_id: tier1_correct[instruction_id] / tier1_total[instruction_id]
+    for instruction_id in tier1_total.keys()
+  }
+
+  return {
+    "prompt_level_accuracy": prompt_correct / prompt_total if prompt_total > 0 else 0,
+    "instruction_level_accuracy": instruction_correct / instruction_total if instruction_total > 0 else 0,
+    "tier0_scores": tier0_scores,
+    "tier1_scores": tier1_scores,
+    "total_prompts": prompt_total,
+    "total_instructions": instruction_total,
+  }
+
+
+def print_report(outputs):
+  """Prints a report on accuracy scores."""
+  scores = calculate_scores(outputs)
+
+  print(f"prompt-level: {scores['prompt_level_accuracy']}")
+  print(f"instruction-level: {scores['instruction_level_accuracy']}")
   print()
-  for instruction_id in sorted(tier0_total.keys()):
-    accuracy = tier0_correct[instruction_id] / tier0_total[instruction_id]
+  for instruction_id in sorted(scores['tier0_scores'].keys()):
+    accuracy = scores['tier0_scores'][instruction_id]
     print(f"{instruction_id} {accuracy}")
   print()
-  for instruction_id in sorted(tier1_total.keys()):
-    accuracy = tier1_correct[instruction_id] / tier1_total[instruction_id]
+  for instruction_id in sorted(scores['tier1_scores'].keys()):
+    accuracy = scores['tier1_scores'][instruction_id]
     print(f"{instruction_id} {accuracy}")
+
+  return scores
+
+
+def write_scores(output_dir, model_name, strict_scores, loose_scores):
+  """Writes combined strict and loose scores to json."""
+  scores_dir = "scores"
+  os.makedirs(scores_dir, exist_ok=True)
+
+  scores_file = os.path.join(scores_dir, f"{model_name}_scores.json")
+  combined_scores = {
+    "strict": strict_scores,
+    "loose": loose_scores,
+  }
+
+  with open(scores_file, "w", encoding='utf-8') as f:
+    json.dump(combined_scores, f, indent=2)
+
+  logging.info("Saved scores to: %s", scores_file)
+  return scores_file
 
 
 def main(argv):
@@ -258,6 +335,12 @@ def main(argv):
   inputs = read_prompt_list(_INPUT_DATA.value)
   prompt_to_response = read_prompt_to_response_dict(
       _INPUT_RESPONSE_DATA.value)
+
+  # Get safe model name for saving scores
+  model_name = get_safe_model_name(_INPUT_RESPONSE_DATA.value)
+
+  # Store scores for both strict and loose evaluation
+  all_scores = {}
 
   # get instruction following results
   for func, output_file_name in [
@@ -272,16 +355,28 @@ def main(argv):
     accuracy = sum(follow_all_instructions) / len(outputs)
     logging.info("Accuracy: %f", accuracy)
 
-    output_file_name = os.path.join(
+    # Write old-style outputs (keeping backwards compatibility)
+    output_file_name_full = os.path.join(
         _OUTPUT_DIR.value, output_file_name + ".jsonl"
     )
-    write_outputs(output_file_name, outputs)
-    logging.info("Generated: %s", output_file_name)
+    write_outputs(output_file_name_full, outputs)
+    logging.info("Generated: %s", output_file_name_full)
 
-    # Prints instruction following accuracy report.
+    # Prints instruction following accuracy report and collect scores
     print("=" * 64)
-    print(f"{output_file_name} Accuracy Scores:")
-    print_report(outputs)
+    print(f"{output_file_name_full} Accuracy Scores:")
+    scores = print_report(outputs)
+
+    # Store scores for combined output
+    eval_type = "strict" if "strict" in output_file_name else "loose"
+    all_scores[eval_type] = scores
+
+    # Save answers once (using strict results since responses are identical)
+    if eval_type == "strict":
+      write_answers(_OUTPUT_DIR.value, model_name, outputs)
+
+  # Write combined scores to single JSON file
+  write_scores(_OUTPUT_DIR.value, model_name, all_scores.get("strict"), all_scores.get("loose"))
 
 
 if __name__ == "__main__":

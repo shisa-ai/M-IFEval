@@ -1,3 +1,14 @@
+# Shisa-Specific Instructions
+
+## How to Install
+Run the typical pip install -r requirements.txt.
+Also run 
+  > python -m spacy download es_core_news_sm --quiet
+  > python -m spacy download xx_sent_ud_sm --quiet
+Because it uses them for some of the NLP processing.
+
+## How to add a new model. 
+
 # M-IFEval: Multilingual Instruction Following Evaluation
 <span style="display: inline; gap: 5px;">
 <a href="https://github.com/lightblue-tech/M-IFEval/fork"><img src="https://img.shields.io/badge/PRs-Welcome-purple?color=%23b304d6" height="20"/></a>
