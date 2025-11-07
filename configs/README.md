@@ -46,10 +46,11 @@ model:
     api_key_env: OPENAI_API_KEY  # Name of env var containing API key
     request_timeout: 60          # Reserved for future use
 
-  generation:                    # Reserved for future use
-    temperature: 0.0
-    top_p: 1.0
-    reasoning_effort: null
+  generation:
+    temperature: 0.0             # Sampling temperature (0.0-2.0)
+    top_p: 1.0                  # Nucleus sampling threshold
+    reasoning_effort: null      # For o1/Gemini: low, medium, high
+    max_tokens: 2048            # Maximum response length
 
   metadata:
     description: Model description for documentation
@@ -63,8 +64,8 @@ languages:
 ```
 
 **Note:** Both formats are supported. The detailed format is useful for:
-- Consistency with other projects
-- Future expansion (temperature, top_p, etc. are not currently used but reserved)
+- Consistency with other projects (matches translation-improvement repo structure)
+- Full control over generation parameters (temperature, top_p, reasoning_effort, max_tokens)
 - Better documentation with metadata fields
 
 ## Available Configs
@@ -78,6 +79,7 @@ languages:
 
 - **`claude-sonnet.yaml`** - Claude 3.5 Sonnet via Anthropic API
 - **`gpt4o.yaml`** - GPT-4o via OpenAI API
+- **`gemini-2.5-flash.yaml`** - Gemini 2.5 Flash via Google AI API (uses `api_key_env: GEMINI_API_KEY`)
 
 ## Usage
 
@@ -154,11 +156,19 @@ Configuration values are resolved in this priority order:
 
 ## Environment Variables
 
-Config files can reference environment variables for sensitive data:
+Config files can reference environment variables for sensitive data. Use the `api_key_env` field to specify which environment variable contains your API key:
 
+```yaml
+model:
+  client:
+    api_key_env: GEMINI_API_KEY  # Will read API key from $GEMINI_API_KEY
+```
+
+**Common environment variables:**
 - `OPENAI_API_KEY` - OpenAI API key
 - `ANTHROPIC_API_KEY` - Anthropic API key
+- `GEMINI_API_KEY` - Google Gemini API key
 - `OPENAI_COMPATIBLE_BASE_URL` - Custom base URL
-- `OPENAI_COMPATIBLE_API_KEY` - Custom API key
+- `OPENAI_COMPATIBLE_API_KEY` - Custom API key (fallback when `api_key_env` not specified)
 
-Set these in a `.env` file (see `.env.example` in the project root).
+Set these in a `.env` file (see `.env.example` in the project root) or export them in your shell.

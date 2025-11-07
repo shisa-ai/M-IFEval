@@ -100,13 +100,29 @@ class OpenaiResponseGenerator(ResponseGenerator):
 ######## OpenAI-Compatible API (vLLM, Together AI, etc.) ########
 
 class OpenaiCompatibleResponseGenerator(ResponseGenerator):
-    def __init__(self, model_name, base_url="http://localhost:8000/v1", api_key="EMPTY"):
+    def __init__(self, model_name, base_url="http://localhost:8000/v1", api_key="EMPTY",
+                 temperature=0.0, top_p=1.0, reasoning_effort=None, max_tokens=2048):
         from openai import OpenAI
 
-        # Allow passing base_url and api_key via environment variables
-        # VLLM_* env vars kept for backwards compatibility
-        self.base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL", os.environ.get("VLLM_BASE_URL", base_url))
-        self.api_key = os.environ.get("OPENAI_COMPATIBLE_API_KEY", os.environ.get("VLLM_API_KEY", api_key))
+        # Use passed parameters, only fall back to env vars if not provided
+        # Check OPENAI_COMPATIBLE_* env vars first, then legacy VLLM_* vars
+        if base_url == "http://localhost:8000/v1":  # Default value, check env vars
+            self.base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL",
+                                          os.environ.get("VLLM_BASE_URL", base_url))
+        else:
+            self.base_url = base_url
+
+        if api_key == "EMPTY":  # Default value, check env vars
+            self.api_key = os.environ.get("OPENAI_COMPATIBLE_API_KEY",
+                                         os.environ.get("VLLM_API_KEY", api_key))
+        else:
+            self.api_key = api_key
+
+        print(f"DEBUG in OpenaiCompatibleResponseGenerator.__init__:")
+        print(f"  Passed base_url parameter: {base_url}")
+        print(f"  Passed api_key parameter: {api_key[:10]}..." if len(api_key) > 10 else f"  Passed api_key parameter: {api_key}")
+        print(f"  Final self.base_url: {self.base_url}")
+        print(f"  Final self.api_key: {self.api_key[:10]}..." if len(self.api_key) > 10 else f"  Final self.api_key: {self.api_key}")
 
         self.openai_client = OpenAI(
             base_url=self.base_url,
@@ -114,11 +130,18 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
         )
         self.model_name = model_name
 
+        # Generation parameters
+        self.temperature = temperature
+        self.top_p = top_p
+        self.reasoning_effort = reasoning_effort
+        self.max_tokens = max_tokens
+
     def get_single_response(self, input_text):
         try:
-            return self.openai_client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            # Build kwargs for API call
+            kwargs = {
+                "model": self.model_name,
+                "messages": [
                     {
                         "role": "user",
                         "content": [
@@ -129,9 +152,16 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
                         ]
                     }
                 ],
-                temperature=0,
-                max_tokens=2048,
-            ).choices[0].message.content
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+                "top_p": self.top_p,
+            }
+
+            # Only add reasoning_effort if specified (some models don't support it)
+            if self.reasoning_effort is not None:
+                kwargs["reasoning_effort"] = self.reasoning_effort
+
+            return self.openai_client.chat.completions.create(**kwargs).choices[0].message.content
         except Exception as e:
             print(e)
             return None
@@ -257,6 +287,26 @@ if __name__ == "__main__":
                         help="Provider type (openai, anthropic, vllm, openai_compatible). If not specified, will look up in SUPPORTED_MODELS.")
     parser.add_argument("--languages", type=str, default=None,
                         help="Comma-separated list of language codes (e.g., 'ja' or 'ja,en,es,fr'). If not specified, all languages will be processed.")
+
+    # API configuration (for openai_compatible provider)
+    parser.add_argument("--base_url", type=str, default=None,
+                        help="Base URL for API endpoint")
+    parser.add_argument("--api_key", type=str, default=None,
+                        help="API key directly (overrides --api_key_env)")
+    parser.add_argument("--api_key_env", type=str, default=None,
+                        help="Environment variable name containing API key (e.g., GEMINI_API_KEY)")
+
+    # Generation parameters (for openai_compatible provider)
+    parser.add_argument("--temperature", type=float, default=0.0,
+                        help="Temperature for sampling (default: 0.0)")
+    parser.add_argument("--top_p", type=float, default=1.0,
+                        help="Top-p for nucleus sampling (default: 1.0)")
+    parser.add_argument("--reasoning_effort", type=str, default=None,
+                        choices=["low", "medium", "high"],
+                        help="Reasoning effort for models that support it (o1, Gemini thinking)")
+    parser.add_argument("--max_tokens", type=int, default=2048,
+                        help="Maximum tokens in response (default: 2048)")
+
     args = parser.parse_args()
 
     model_name = args.model_name
@@ -278,7 +328,37 @@ if __name__ == "__main__":
         paths = [p for p in paths for lang in lang_codes if f"/{lang}_input_data.jsonl" in p]
 
     model_class = MODEL_CLASS_DICT[provider_type]
-    response_generator = model_class(model_name)
+
+    # Create response generator with generation parameters for openai_compatible
+    if provider_type == "openai_compatible":
+        # Determine API key (priority: --api_key > env var from --api_key_env > default env vars)
+        api_key = "EMPTY"
+        if args.api_key:
+            api_key = args.api_key
+            print(f"Using API key from --api_key argument: {api_key[:10]}..." if len(api_key) > 10 else f"Using API key: {api_key}")
+        elif args.api_key_env:
+            # Read from specified environment variable
+            api_key = os.environ.get(args.api_key_env, "EMPTY")
+            print(f"Using API key from env var ${args.api_key_env}: {api_key[:10]}..." if len(api_key) > 10 else f"Using API key from ${args.api_key_env}: {api_key}")
+        else:
+            print("No --api_key or --api_key_env specified, using default env var logic")
+        # else: let OpenaiCompatibleResponseGenerator use its default logic
+
+        # Determine base_url
+        base_url = args.base_url if args.base_url else "http://localhost:8000/v1"
+        print(f"Using base_url: {base_url}")
+
+        response_generator = model_class(
+            model_name,
+            base_url=base_url,
+            api_key=api_key,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            reasoning_effort=args.reasoning_effort,
+            max_tokens=args.max_tokens
+        )
+    else:
+        response_generator = model_class(model_name)
 
     for path in paths:
         print(path + " - " + model_name)

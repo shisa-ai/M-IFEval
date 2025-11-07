@@ -78,6 +78,22 @@ def merge_config_and_args(config: Dict[str, Any], args: argparse.Namespace) -> a
         # Try nested client.api_key first, then top-level api_key
         args.api_key = client_config.get("api_key") or model_config.get("api_key")
 
+    # API key environment variable name (for configs that specify which env var to use)
+    if not hasattr(args, 'api_key_env') or args.api_key_env is None:
+        args.api_key_env = client_config.get("api_key_env")
+
+    # Generation parameters (for openai_compatible provider)
+    generation_config = model_config.get("generation", {})
+
+    if not hasattr(args, 'temperature') or args.temperature is None:
+        args.temperature = generation_config.get("temperature", 0.0)
+    if not hasattr(args, 'top_p') or args.top_p is None:
+        args.top_p = generation_config.get("top_p", 1.0)
+    if not hasattr(args, 'reasoning_effort') or args.reasoning_effort is None:
+        args.reasoning_effort = generation_config.get("reasoning_effort")
+    if not hasattr(args, 'max_tokens') or args.max_tokens is None:
+        args.max_tokens = generation_config.get("max_tokens", 2048)
+
     # Evaluation configuration
     if args.languages is None:
         languages = config.get("languages")
@@ -110,6 +126,19 @@ def main():
                         help="Base URL for the API (default: http://localhost:{port}/v1, or from config/.env)")
     parser.add_argument("--api_key", type=str, default=None,
                         help="API key for the server (default: EMPTY, or from config/.env)")
+    parser.add_argument("--api_key_env", type=str, default=None,
+                        help="Environment variable name containing API key (e.g., GEMINI_API_KEY, from config)")
+
+    # Generation parameters (for openai_compatible provider)
+    parser.add_argument("--temperature", type=float, default=None,
+                        help="Temperature for sampling (default: 0.0, or from config)")
+    parser.add_argument("--top_p", type=float, default=None,
+                        help="Top-p for nucleus sampling (default: 1.0, or from config)")
+    parser.add_argument("--reasoning_effort", type=str, default=None,
+                        choices=["low", "medium", "high"],
+                        help="Reasoning effort for models that support it (o1, Gemini thinking)")
+    parser.add_argument("--max_tokens", type=int, default=None,
+                        help="Maximum tokens in response (default: 2048, or from config)")
 
     # Evaluation configuration
     parser.add_argument("--languages", type=str, default=None,
@@ -148,6 +177,15 @@ def main():
     if args.provider is None:
         args.provider = "openai_compatible"
 
+    # Generation parameter defaults
+    if args.temperature is None:
+        args.temperature = 0.0
+    if args.top_p is None:
+        args.top_p = 1.0
+    if args.max_tokens is None:
+        args.max_tokens = 2048
+    # reasoning_effort defaults to None (not all models support it)
+
     # Validate required arguments
     if args.model_name is None:
         print("Error: --model_name is required (either via CLI or config file)")
@@ -165,9 +203,9 @@ def main():
     if args.api_key is None:
         args.api_key = os.environ.get("OPENAI_COMPATIBLE_API_KEY", "EMPTY")
 
-    # Set environment variables for child processes
-    os.environ["OPENAI_COMPATIBLE_BASE_URL"] = args.base_url
-    os.environ["OPENAI_COMPATIBLE_API_KEY"] = args.api_key
+    # NOTE: We don't set environment variables for child processes anymore
+    # because we pass everything explicitly via CLI arguments to get_responses.py
+    # This avoids the legacy OPENAI_COMPATIBLE_* env vars from interfering
 
     print("=" * 80)
     print(f"Running evaluation for model: {args.model_name}")
@@ -185,8 +223,32 @@ def main():
             sys.executable, "-m", "get_responses",
             "--model_name", args.model_name,
             "--provider", args.provider,
-            "--languages", args.languages
+            "--languages", args.languages,
+            "--temperature", str(args.temperature),
+            "--top_p", str(args.top_p),
+            "--max_tokens", str(args.max_tokens),
         ]
+
+        # Add base_url if specified
+        if args.base_url:
+            generate_cmd.extend(["--base_url", args.base_url])
+
+        # Add API key configuration
+        # Prioritize api_key_env over api_key when api_key is just "EMPTY" (the default)
+        if args.api_key_env:
+            generate_cmd.extend(["--api_key_env", args.api_key_env])
+        elif args.api_key and args.api_key != "EMPTY":
+            generate_cmd.extend(["--api_key", args.api_key])
+
+        # Only add reasoning_effort if specified (some models don't support it)
+        if args.reasoning_effort is not None:
+            generate_cmd.extend(["--reasoning_effort", args.reasoning_effort])
+
+        # Debug: print the command being run
+        print(f"DEBUG: Running command: {' '.join(generate_cmd)}")
+        print(f"DEBUG: args.api_key_env = {args.api_key_env}")
+        print(f"DEBUG: args.api_key = {args.api_key}")
+        print()
 
         result = subprocess.run(generate_cmd, check=False)
 

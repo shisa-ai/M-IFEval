@@ -151,11 +151,19 @@ The project supports `.env` files for configuration. Priority order:
 **Supported .env variables:**
 - `OPENAI_COMPATIBLE_BASE_URL`: Base URL for OpenAI-compatible API
 - `OPENAI_COMPATIBLE_PORT`: Port for OpenAI-compatible API (alternative to full base URL)
-- `OPENAI_COMPATIBLE_API_KEY`: API key for OpenAI-compatible endpoints
+- `OPENAI_COMPATIBLE_API_KEY`: API key for OpenAI-compatible endpoints (fallback)
 - `OPENAI_API_KEY`: Official OpenAI API key
 - `ANTHROPIC_API_KEY`: Anthropic API key
+- `GEMINI_API_KEY`: Google Gemini API key (when using Gemini via OpenAI-compatible endpoint)
 - `HUGGINGFACE_TOKEN`: HuggingFace token for gated models
 - `MAX_MODEL_LEN`: Maximum model length for vLLM (default: 4096)
+
+**Note:** Configs can specify which environment variable to use via the `api_key_env` field:
+```yaml
+model:
+  client:
+    api_key_env: GEMINI_API_KEY  # Reads from $GEMINI_API_KEY
+```
 
 **Example .env file:**
 ```bash
@@ -205,10 +213,11 @@ model:
     api_key_env: OPENAI_API_KEY
     request_timeout: 60  # Reserved for future use
 
-  generation:  # Reserved for future use
-    temperature: 0.0
-    top_p: 1.0
-    reasoning_effort: null
+  generation:
+    temperature: 0.0           # Sampling temperature (0.0-2.0)
+    top_p: 1.0                # Nucleus sampling threshold
+    reasoning_effort: null    # For o1/Gemini thinking models: low, medium, high
+    max_tokens: 2048          # Maximum response length
 
   metadata:
     description: Model description
@@ -216,7 +225,7 @@ model:
 languages: [ja, en, es, fr]
 ```
 
-Both formats are fully supported. The detailed format reserves fields for future expansion.
+Both formats are fully supported. Generation parameters (temperature, top_p, reasoning_effort, max_tokens) work with the `openai_compatible` provider.
 
 **Priority order for configuration:**
 1. Command-line arguments (highest)

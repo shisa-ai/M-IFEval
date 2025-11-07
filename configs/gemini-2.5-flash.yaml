@@ -1,0 +1,47 @@
+# Configuration for M-IFEval using Gemini 2.5 Flash
+# Requires GEMINI_API_KEY environment variable
+
+# Output configuration
+output_dir: ./evaluation/
+
+# Model configuration
+model:
+  # Model name - Gemini 2.5 Flash
+  name: gemini-2.5-flash
+
+  # Provider type - openai_compatible for Gemini's OpenAI-compatible endpoint
+  provider: openai_compatible
+
+  client:
+    # Base URL for Gemini's OpenAI-compatible endpoint
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+
+    # Environment variable supplying the Gemini API key
+    api_key_env: GEMINI_API_KEY
+
+    # Request timeout (seconds) for HTTP calls
+    request_timeout: 60
+
+  generation:
+    # Temperature for sampling. Set to 0.0 for deterministic output.
+    temperature: 0.0
+
+    # Top-p for nucleus sampling
+    top_p: 1.0
+
+    # Reasoning effort level (low, medium, high)
+    # Gemini thinking models support this parameter
+    reasoning_effort: null
+
+    # Maximum tokens in response
+    max_tokens: 2048
+
+  metadata:
+    description: Gemini 2.5 Flash for M-IFEval multilingual instruction-following evaluation
+
+# Languages to evaluate
+languages:
+  - ja    # Japanese
+  - en    # English
+  - es    # Spanish
+  - fr    # French
