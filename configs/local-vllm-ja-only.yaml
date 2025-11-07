@@ -1,0 +1,17 @@
+# Configuration for M-IFEval using a local model via vLLM server
+# Japanese language evaluation only
+# This config uses port 8000 (default)
+
+# Model configuration
+model:
+  name: your-model-name-here
+  provider: openai_compatible
+  port: 8000  # Alternative to specifying full base_url
+  # base_url: http://localhost:8000/v1  # Or specify full URL directly
+
+# Languages to evaluate (Japanese only in this example)
+languages:
+  - ja
+
+# Output directory for evaluation results
+output_dir: ./evaluation/

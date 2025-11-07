@@ -50,6 +50,10 @@ pip3 install --user -r requirements.txt
 # Download required Spacy models
 python -m spacy download es_core_news_sm --quiet
 python -m spacy download xx_sent_ud_sm --quiet
+
+# (Optional) Create .env file for configuration
+cp .env.example .env
+# Edit .env with your API keys and settings
 ```
 
 ### Generate Model Responses
@@ -75,26 +79,47 @@ python3 -m get_responses.py --model_name {model_name}
 
 #### Quick Evaluation (Convenience Script)
 
-For OpenAI-compatible API endpoints, use the convenience script:
+For OpenAI-compatible API endpoints, use the convenience script. The script supports three configuration methods (in priority order: CLI args > config file > .env file):
+
+**Using a YAML config file (recommended):**
 
 ```bash
-# Run end-to-end evaluation (generate + eval)
-python3 shisa_run_eval.py \
-  --model_name your-model-name \
-  --port 8000 \
-  --languages ja,en,es,fr
+# Use a predefined config
+python3 shisa_run_eval.py --config configs/shisa-unphi.yaml
 
-# With custom base URL and API key
+# Override specific values from config
 python3 shisa_run_eval.py \
-  --model_name your-model-name \
-  --base_url http://localhost:8001/v1 \
-  --api_key your-api-key \
+  --config configs/shisa-unphi.yaml \
   --languages ja
 
 # Skip generation if responses already exist
 python3 shisa_run_eval.py \
-  --model_name your-model-name \
+  --config configs/shisa-unphi.yaml \
   --skip_generate
+```
+
+**Using CLI arguments:**
+
+```bash
+# Run end-to-end evaluation (uses .env if present)
+python3 shisa_run_eval.py --model_name your-model-name
+
+# Specify port explicitly (overrides .env)
+python3 shisa_run_eval.py \
+  --model_name your-model-name \
+  --port 8001
+
+# With custom base URL and API key (overrides .env)
+python3 shisa_run_eval.py \
+  --model_name your-model-name \
+  --base_url http://localhost:8001/v1 \
+  --api_key your-api-key \
+  --provider openai_compatible
+
+# Evaluate specific languages only
+python3 shisa_run_eval.py \
+  --model_name your-model-name \
+  --languages ja,en
 ```
 
 #### Manual Evaluation
@@ -115,21 +140,139 @@ python3 -m evaluation_main \
 
 ## Key Implementation Details
 
+### Environment Configuration
+
+The project supports `.env` files for configuration. Priority order:
+1. Command-line arguments (highest priority)
+2. Environment variables
+3. `.env` file values
+4. Defaults (lowest priority)
+
+**Supported .env variables:**
+- `OPENAI_COMPATIBLE_BASE_URL`: Base URL for OpenAI-compatible API
+- `OPENAI_COMPATIBLE_PORT`: Port for OpenAI-compatible API (alternative to full base URL)
+- `OPENAI_COMPATIBLE_API_KEY`: API key for OpenAI-compatible endpoints
+- `OPENAI_API_KEY`: Official OpenAI API key
+- `ANTHROPIC_API_KEY`: Anthropic API key
+- `HUGGINGFACE_TOKEN`: HuggingFace token for gated models
+- `MAX_MODEL_LEN`: Maximum model length for vLLM (default: 4096)
+
+**Example .env file:**
+```bash
+OPENAI_COMPATIBLE_PORT=8000
+OPENAI_COMPATIBLE_API_KEY=EMPTY
+```
+
+The `shisa_run_eval.py` script automatically loads `.env` if present. You can also specify a custom env file with `--env_file`.
+
+### YAML Configuration Files
+
+The project supports YAML config files for easier model evaluation management. Configs are stored in the `configs/` directory.
+
+**Config file structure (simple format):**
+```yaml
+# Model configuration
+model:
+  name: your-model-name
+  provider: openai_compatible  # or openai, anthropic, vllm
+  base_url: http://localhost:9000/v1
+  # OR use port shorthand:
+  # port: 9000
+  api_key: EMPTY  # optional, defaults to env var
+
+# Languages to evaluate
+languages:
+  - ja
+  - en
+  - es
+  - fr
+
+# Output directory
+output_dir: ./evaluation/
+```
+
+**Config file structure (detailed format - matches translation-improvement repo):**
+```yaml
+output_dir: ./evaluation/
+workers: 15  # Reserved for future parallel processing
+
+model:
+  name: your-model-name
+  provider: openai_compatible
+
+  client:
+    base_url: http://localhost:9000/v1
+    api_key_env: OPENAI_API_KEY
+    request_timeout: 60  # Reserved for future use
+
+  generation:  # Reserved for future use
+    temperature: 0.0
+    top_p: 1.0
+    reasoning_effort: null
+
+  metadata:
+    description: Model description
+
+languages: [ja, en, es, fr]
+```
+
+Both formats are fully supported. The detailed format reserves fields for future expansion.
+
+**Priority order for configuration:**
+1. Command-line arguments (highest)
+2. YAML config file values
+3. Environment variables (.env file)
+4. Defaults (lowest)
+
+**Example configs provided:**
+- `configs/shisa-unphi.yaml`: Local vLLM server on port 9000
+- `configs/claude-sonnet.yaml`: Claude 3.5 Sonnet via Anthropic API
+- `configs/gpt4o.yaml`: GPT-4o via OpenAI API
+- `configs/local-vllm-ja-only.yaml`: Japanese-only evaluation on port 8000
+
+**Usage:**
+```bash
+# Use config as-is
+python3 shisa_run_eval.py --config configs/shisa-unphi.yaml
+
+# Override specific values
+python3 shisa_run_eval.py --config configs/shisa-unphi.yaml --languages ja
+```
+
 ### Adding New Models
 
-**Option 1: Dynamic (No code changes needed)**
+**Option 1: YAML Config (Recommended - No code changes)**
 
-Use the `--provider` flag when generating responses:
-```bash
-python3 -m get_responses --model_name your-model --provider openai_compatible
+Create a config file in `configs/`:
+```yaml
+model:
+  name: your-model-name
+  provider: openai_compatible
+  base_url: http://localhost:8000/v1
+languages:
+  - ja
+  - en
+  - es
+  - fr
+output_dir: ./evaluation/
 ```
 
-Or use the convenience script:
+Then run:
 ```bash
-python3 shisa_run_eval.py --model_name your-model --port 8000
+python3 shisa_run_eval.py --config configs/your-model.yaml
 ```
 
-**Option 2: Static (Permanent addition)**
+**Option 2: CLI Arguments (No code changes)**
+
+Use the `--provider` flag:
+```bash
+python3 shisa_run_eval.py \
+  --model_name your-model \
+  --provider openai_compatible \
+  --port 8000
+```
+
+**Option 3: Static (Permanent addition to codebase)**
 
 Add model to `SUPPORTED_MODELS` dict in `get_responses.py`:
 ```python

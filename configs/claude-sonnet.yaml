@@ -1,0 +1,17 @@
+# Configuration for M-IFEval using Claude 3.5 Sonnet
+# Requires ANTHROPIC_API_KEY environment variable
+
+# Model configuration
+model:
+  name: claude-3-5-sonnet-20240620
+  provider: anthropic
+
+# Languages to evaluate
+languages:
+  - ja
+  - en
+  - es
+  - fr
+
+# Output directory for evaluation results
+output_dir: ./evaluation/

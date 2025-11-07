@@ -1,0 +1,61 @@
+# Configuration for M-IFEval using Shisa v2 unphi4 14B.
+# This config uses temperature 0.0 for deterministic output.
+
+# Output configuration
+output_dir: ./evaluation/
+
+# Parallel processing
+# Note: M-IFEval's get_responses.py uses this for vLLM server (ThreadPoolExecutor max_workers=15)
+# This setting is for future use when shisa_run_eval.py supports parallel evaluation
+workers: 15
+
+# Model configuration
+model:
+  # Model name/path - Shisa v2 unphi4 14B (INT8 quantized)
+  name: shisa-ai/shisa-v2-unphi4-14b-denoted-W8A8-INT8
+
+  # Provider type - openai_compatible for OpenAI-compatible API endpoints
+  provider: openai_compatible
+
+  # Remote model identifier. When a model config omits remote_id, the loader
+  # uses the model name. Most configs can skip this field.
+  remote_id: null
+
+  client:
+    # Base URL for the OpenAI-compatible endpoint. Override per model if you
+    # need to hit different services (e.g., local vs hosted variants).
+    base_url: http://localhost:9000/v1
+
+    # Environment variable supplying the API key. Leave unset for keyless local
+    # endpoints, or override per model if a different credential is required.
+    # Defaults to OPENAI_COMPATIBLE_API_KEY
+    api_key_env: OPENAI_API_KEY
+
+    # Request timeout (seconds) for HTTP calls.
+    # Note: Currently not used by M-IFEval but reserved for future use
+    request_timeout: 60
+
+  generation:
+    # Temperature for sampling. Set to 0.0 for deterministic output.
+    # Note: Currently not used by M-IFEval (uses default 0.0) but reserved for future use
+    temperature: 0.0
+
+    # Top-p for nucleus sampling
+    # Note: Currently not used by M-IFEval but reserved for future use
+    top_p: 1.0
+
+    # Reasoning effort level for models that support it (low, medium, high)
+    # Set to null to omit the parameter for models that don't support it
+    # Note: Currently not used by M-IFEval but reserved for future use
+    reasoning_effort: null
+
+  metadata:
+    # Free-form description surfaced in CLI summaries and metadata output
+    description: Shisa v2 unphi4 14B for M-IFEval multilingual instruction-following evaluation (temperature 0.0)
+
+# Languages to evaluate
+languages:
+  - ja    # Japanese
+  - en    # English
+  - es    # Spanish
+  - fr    # French
