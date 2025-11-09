@@ -14,10 +14,45 @@
 # limitations under the License.
 
 import os
+import sys
 import argparse
+import logging
+import traceback
 from glob import glob
+from pathlib import Path
 from tqdm.auto import tqdm
 from datasets import load_dataset
+import backoff
+from loguru import logger
+
+# Setup logging with loguru
+logger.remove()  # Remove default handler
+logger.add(
+    sys.stdout,
+    format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+    level="INFO",
+    colorize=True
+)
+
+# Suppress HTTP request logging from httpx and openai
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
+# Backoff handlers
+def on_backoff_log(details):
+    """Log backoff retry attempts."""
+    logger.warning(
+        f"Backing off {details['wait']:.1f}s after {details['tries']} tries - {details['exception']}"
+    )
+
+
+def on_giveup_log(details):
+    """Log when giving up on retries."""
+    logger.error(
+        f"Giving up after {details['tries']} tries - {details['exception']}"
+    )
 
 class ResponseGenerator:
     def __init__(self, model_name):
@@ -136,40 +171,109 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
         self.reasoning_effort = reasoning_effort
         self.max_tokens = max_tokens
 
+    @backoff.on_exception(
+        backoff.expo,
+        (Exception,),
+        max_tries=4,
+        on_backoff=on_backoff_log,
+        on_giveup=on_giveup_log,
+        jitter=backoff.full_jitter
+    )
     def get_single_response(self, input_text):
+        # Build kwargs for API call
+        kwargs = {
+            "model": self.model_name,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": input_text
+                        }
+                    ]
+                }
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
+        }
+
+        # Only add reasoning_effort if specified (some models don't support it)
+        if self.reasoning_effort is not None:
+            kwargs["reasoning_effort"] = self.reasoning_effort
+
         try:
-            # Build kwargs for API call
-            kwargs = {
-                "model": self.model_name,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": input_text
-                            }
-                        ]
-                    }
-                ],
-                "temperature": self.temperature,
-                "max_tokens": self.max_tokens,
-                "top_p": self.top_p,
-            }
+            response = self.openai_client.chat.completions.create(**kwargs)
 
-            # Only add reasoning_effort if specified (some models don't support it)
-            if self.reasoning_effort is not None:
-                kwargs["reasoning_effort"] = self.reasoning_effort
+            # Validate response structure
+            if response is None:
+                raise Exception("API returned None response")
 
-            return self.openai_client.chat.completions.create(**kwargs).choices[0].message.content
+            if not hasattr(response, 'choices') or not response.choices or len(response.choices) == 0:
+                raise Exception("API response has no choices")
+
+            if response.choices[0] is None:
+                raise Exception("First choice in API response is None")
+
+            choice = response.choices[0]
+
+            # Check for message and content
+            content = None
+            if hasattr(choice, 'message') and choice.message:
+                content = getattr(choice.message, "content", None)
+
+            # Try alternative response structures if content is None
+            if content is None:
+                if hasattr(choice, 'text'):
+                    content = choice.text
+                    logger.debug(f"Found content in choice.text")
+                elif hasattr(choice, 'content'):
+                    content = choice.content
+                    logger.debug(f"Found content in choice.content")
+                elif hasattr(choice, 'delta') and hasattr(choice.delta, 'content'):
+                    content = choice.delta.content
+                    logger.debug(f"Found content in choice.delta.content")
+                elif hasattr(choice, 'finish_reason') and choice.finish_reason:
+                    # Check if content was filtered
+                    if 'content_filter' in choice.finish_reason.lower() or 'prohibited' in choice.finish_reason.lower():
+                        debug_file = Path("response_debug.txt")
+                        with debug_file.open('a', encoding='utf-8') as f:
+                            f.write(f"\n{'='*80}\n")
+                            f.write(f"FILTERED RESPONSE (finish_reason: {choice.finish_reason})\n")
+                            f.write(f"Model: {self.model_name}\n")
+                            f.write(f"Prompt: {input_text[:200]}...\n")
+                            f.write(f"{'='*80}\n")
+                        logger.error(f"Response filtered. Saved to {debug_file}")
+                        raise Exception(f"Content filtered: {choice.finish_reason}")
+
+            if content is None:
+                raise Exception("API response has no content in any known field")
+
+            return content.strip() if content else ""
+
         except Exception as e:
-            print(e)
-            return None
+            # Save detailed error to debug file
+            debug_file = Path("response_debug.txt")
+            with debug_file.open("a", encoding="utf-8") as f:
+                f.write(f"\n{'='*80}\n")
+                f.write(f"API ERROR\n")
+                f.write(f"Model: {self.model_name}\n")
+                f.write(f"Error: {e}\n")
+                f.write(f"Error type: {type(e).__name__}\n")
+                f.write(f"Prompt (first 200 chars): {input_text[:200]}\n")
+                f.write(f"Full traceback:\n")
+                f.write(traceback.format_exc())
+                f.write(f"{'='*80}\n")
+            logger.error(f"API error for model {self.model_name}: {e}")
+            raise  # Re-raise to trigger backoff retry
 
     def get_response(self, input_texts):
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
         responses = [None] * len(input_texts)
+        failed_indices = []
+
         with ThreadPoolExecutor(max_workers=15) as executor:
             # Submit all tasks and map them to their indices
             future_to_idx = {
@@ -178,9 +282,18 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
             }
 
             # Process completed futures with progress bar
-            for future in tqdm(as_completed(future_to_idx), total=len(input_texts)):
+            for future in tqdm(as_completed(future_to_idx), total=len(input_texts), desc="Processing requests"):
                 idx = future_to_idx[future]
-                responses[idx] = future.result()
+                try:
+                    responses[idx] = future.result()
+                except Exception as exc:
+                    logger.error(f"Failed to get response for prompt {idx} after retries: {exc}")
+                    failed_indices.append(idx)
+                    responses[idx] = None  # Return None for failed requests
+
+        if failed_indices:
+            logger.warning(f"Failed to get responses for {len(failed_indices)} prompts: {failed_indices}")
+            logger.info(f"Check response_debug.txt for detailed error information")
 
         return responses
 
