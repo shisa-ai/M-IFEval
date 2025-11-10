@@ -42,8 +42,8 @@ model:
     # Top-p for nucleus sampling
     top_p: 1.0
 
-    # Repetition penalty for models that support it
-    repetition_penalty: null
+    # Repetition penalty for models that support it (1.0 = no penalty, higher = more penalty)
+    repetition_penalty: 1.1
     
     # Reasoning effort level for models that support it (low, medium, high)
     # Set to null to omit the parameter for models that don't support it

@@ -91,6 +91,8 @@ def merge_config_and_args(config: Dict[str, Any], args: argparse.Namespace) -> a
         args.top_p = generation_config.get("top_p", 1.0)
     if not hasattr(args, 'reasoning_effort') or args.reasoning_effort is None:
         args.reasoning_effort = generation_config.get("reasoning_effort")
+    if not hasattr(args, 'repetition_penalty') or args.repetition_penalty is None:
+        args.repetition_penalty = generation_config.get("repetition_penalty")
     if not hasattr(args, 'max_tokens') or args.max_tokens is None:
         args.max_tokens = generation_config.get("max_tokens", 2048)
 
@@ -137,6 +139,8 @@ def main():
     parser.add_argument("--reasoning_effort", type=str, default=None,
                         choices=["low", "medium", "high"],
                         help="Reasoning effort for models that support it (o1, Gemini thinking)")
+    parser.add_argument("--repetition_penalty", type=float, default=None,
+                        help="Repetition penalty (1.0 = no penalty, higher values penalize repetition)")
     parser.add_argument("--max_tokens", type=int, default=None,
                         help="Maximum tokens in response (default: 2048, or from config)")
 
@@ -243,6 +247,10 @@ def main():
         # Only add reasoning_effort if specified (some models don't support it)
         if args.reasoning_effort is not None:
             generate_cmd.extend(["--reasoning_effort", args.reasoning_effort])
+
+        # Only add repetition_penalty if specified (some models don't support it)
+        if args.repetition_penalty is not None:
+            generate_cmd.extend(["--repetition_penalty", str(args.repetition_penalty)])
 
         # Debug: print the command being run
         print(f"DEBUG: Running command: {' '.join(generate_cmd)}")

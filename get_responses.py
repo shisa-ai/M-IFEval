@@ -136,7 +136,7 @@ class OpenaiResponseGenerator(ResponseGenerator):
 
 class OpenaiCompatibleResponseGenerator(ResponseGenerator):
     def __init__(self, model_name, base_url="http://localhost:8000/v1", api_key="EMPTY",
-                 temperature=0.0, top_p=1.0, reasoning_effort=None, max_tokens=2048):
+                 temperature=0.0, top_p=1.0, reasoning_effort=None, max_tokens=2048, repetition_penalty=None):
         from openai import OpenAI
 
         # Use passed parameters, only fall back to env vars if not provided
@@ -170,6 +170,7 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
         self.top_p = top_p
         self.reasoning_effort = reasoning_effort
         self.max_tokens = max_tokens
+        self.repetition_penalty = repetition_penalty
 
     @backoff.on_exception(
         backoff.expo,
@@ -202,6 +203,14 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
         # Only add reasoning_effort if specified (some models don't support it)
         if self.reasoning_effort is not None:
             kwargs["reasoning_effort"] = self.reasoning_effort
+
+        # Build extra_body for non-standard parameters (vLLM-specific)
+        extra_body = {}
+        if self.repetition_penalty is not None:
+            extra_body["repetition_penalty"] = self.repetition_penalty
+
+        if extra_body:
+            kwargs["extra_body"] = extra_body
 
         try:
             response = self.openai_client.chat.completions.create(**kwargs)
@@ -457,6 +466,8 @@ if __name__ == "__main__":
     parser.add_argument("--reasoning_effort", type=str, default=None,
                         choices=["low", "medium", "high"],
                         help="Reasoning effort for models that support it (o1, Gemini thinking)")
+    parser.add_argument("--repetition_penalty", type=float, default=None,
+                        help="Repetition penalty (1.0 = no penalty, higher values penalize repetition)")
     parser.add_argument("--max_tokens", type=int, default=2048,
                         help="Maximum tokens in response (default: 2048)")
 
@@ -508,7 +519,8 @@ if __name__ == "__main__":
             temperature=args.temperature,
             top_p=args.top_p,
             reasoning_effort=args.reasoning_effort,
-            max_tokens=args.max_tokens
+            max_tokens=args.max_tokens,
+            repetition_penalty=args.repetition_penalty
         )
     else:
         response_generator = model_class(model_name)
