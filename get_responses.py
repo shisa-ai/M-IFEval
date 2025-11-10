@@ -218,6 +218,24 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
 
             choice = response.choices[0]
 
+            # Check for length limit hit with no content generated
+            if hasattr(choice, 'finish_reason') and choice.finish_reason == 'length':
+                completion_tokens = response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0
+                if completion_tokens == 0:
+                    debug_file = Path("response_debug.txt")
+                    with debug_file.open('a', encoding='utf-8') as f:
+                        f.write(f"\n{'='*80}\n")
+                        f.write(f"LENGTH LIMIT HIT WITH ZERO TOKENS GENERATED\n")
+                        f.write(f"Model: {self.model_name}\n")
+                        f.write(f"Prompt length: {len(input_text)} chars\n")
+                        f.write(f"Prompt (first 200 chars): {input_text[:200]}\n")
+                        f.write(f"max_tokens setting: {self.max_tokens}\n")
+                        if hasattr(response, 'usage') and response.usage:
+                            f.write(f"Token usage: prompt={response.usage.prompt_tokens}, completion={response.usage.completion_tokens}, total={response.usage.total_tokens}\n")
+                        f.write(f"{'='*80}\n")
+                    logger.error(f"Hit length limit with 0 tokens generated. Prompt may be too long or max_tokens too small. Saved to {debug_file}")
+                    raise Exception(f"Length limit hit with zero completion tokens. Prompt tokens: {response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 'unknown'}, max_tokens: {self.max_tokens}")
+
             # Check for message and content
             content = None
             if hasattr(choice, 'message') and choice.message:
@@ -248,6 +266,21 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
                         raise Exception(f"Content filtered: {choice.finish_reason}")
 
             if content is None:
+                # Log the full raw response for debugging
+                debug_file = Path("response_debug.txt")
+                with debug_file.open('a', encoding='utf-8') as f:
+                    f.write(f"\n{'='*80}\n")
+                    f.write(f"NO CONTENT FOUND IN RESPONSE\n")
+                    f.write(f"Model: {self.model_name}\n")
+                    f.write(f"Prompt (first 200 chars): {input_text[:200]}\n")
+                    f.write(f"Raw response object:\n")
+                    f.write(f"{response}\n")
+                    f.write(f"Response type: {type(response)}\n")
+                    f.write(f"Response dict: {response.model_dump() if hasattr(response, 'model_dump') else 'N/A'}\n")
+                    f.write(f"Choice object: {choice}\n")
+                    f.write(f"Choice dict: {choice.model_dump() if hasattr(choice, 'model_dump') else 'N/A'}\n")
+                    f.write(f"{'='*80}\n")
+                logger.error(f"No content found in API response. Saved to {debug_file}")
                 raise Exception("API response has no content in any known field")
 
             return content.strip() if content else ""
@@ -262,6 +295,13 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
                 f.write(f"Error: {e}\n")
                 f.write(f"Error type: {type(e).__name__}\n")
                 f.write(f"Prompt (first 200 chars): {input_text[:200]}\n")
+                # Try to log the response if it exists in scope
+                try:
+                    if 'response' in locals():
+                        f.write(f"Raw response object:\n{response}\n")
+                        f.write(f"Response dict: {response.model_dump() if hasattr(response, 'model_dump') else 'N/A'}\n")
+                except Exception:
+                    f.write(f"Could not serialize response object\n")
                 f.write(f"Full traceback:\n")
                 f.write(traceback.format_exc())
                 f.write(f"{'='*80}\n")

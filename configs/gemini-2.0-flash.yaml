@@ -1,4 +1,4 @@
-# Configuration for M-IFEval using Gemini 2.5 Flash
+# Configuration for M-IFEval using Gemini 2.0 Flash
 # Requires GEMINI_API_KEY environment variable
 
 # Output configuration
@@ -6,8 +6,8 @@ output_dir: ./evaluation/
 
 # Model configuration
 model:
-  # Model name - Gemini 2.5 Flash
-  name: gemini-2.5-flash
+  # Model name - Gemini 2.0 Flash
+  name: gemini-2.0-flash
 
   # Provider type - openai_compatible for Gemini's OpenAI-compatible endpoint
   provider: openai_compatible
@@ -31,13 +31,13 @@ model:
 
     # Reasoning effort level (low, medium, high)
     # Gemini thinking models support this parameter
-    reasoning_effort: low
+    reasoning_effort: null
 
     # Maximum tokens in response
     max_tokens: 8000
 
   metadata:
-    description: Gemini 2.5 Flash for M-IFEval multilingual instruction-following evaluation
+    description: Gemini 2.0 Flash for M-IFEval multilingual instruction-following evaluation
 
 # Languages to evaluate
 languages:
