@@ -41,6 +41,8 @@ M-IFEval currently supports **French**, **Japanese**, and **Spanish**, incorpora
 
 > Update (2025-11-10): Updated `ja:keywords:frequency` to count keyword occurrences via substring matching (regex with `re.escape`) instead of relying on tokenization. This prevents false negatives when Japanese morphological analyzers split compounds (e.g., `大聖堂`). Tests added in `tests/test_keyword_frequency_substring.py`.
 
+> Update (2025-11-10): Updated `ja:keywords:forbidden_words` to use substring matching instead of token-surface matching (Janome). This ensures compounds and decorated text are properly flagged without depending on morphological splits. Covered by `tests/test_forbidden_words_substring.py`.
+
 ## Table of Contents
 - [**🏆 Leader board**](#-leader-board)
 - [**⚙️ How to run**](#️-how-to-run)  

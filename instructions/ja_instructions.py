@@ -1175,11 +1175,14 @@ class ForbiddenWords(Instruction):
     return ["forbidden_words"]
 
   def check_following(self, value):
-    """Check if the response does not contain the expected keywords."""
-    tokens = ja_instructions_util.tokenizing_texts(value)
-    words = [token.surface for token in tokens]
+    """Check if the response does not contain forbidden keywords.
+
+    Uses simple substring matching to avoid missing compounds due to
+    morphological tokenization splitting.
+    """
+    assert isinstance(value, str)
     for word in self._forbidden_words:
-      if word in words:
+      if isinstance(word, str) and word and word in value:
         return False
     return True
 

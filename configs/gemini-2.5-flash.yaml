@@ -34,7 +34,7 @@ model:
     reasoning_effort: null
 
     # Maximum tokens in response
-    max_tokens: 2048
+    max_tokens: 4096
 
   metadata:
     description: Gemini 2.5 Flash for M-IFEval multilingual instruction-following evaluation
