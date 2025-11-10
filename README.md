@@ -27,6 +27,10 @@ Building upon the [Instruction Following Evaluation for Large Language Models](h
 
 M-IFEval currently supports **French**, **Japanese**, and **Spanish**, incorporating both general and language-specific instructions to provide a more comprehensive assessment of multilingual instruction adherence.
 
+> Update (2025-11-10): The Japanese keyword existence checker (`ja:keywords:existence`) now uses simple substring matching instead of token-surface matching to avoid false negatives caused by morphological splitting (e.g., Janome splitting “創造性” into “創造”+“性”). A regression test was added at `tests/test_keyword_existence_tokenization.py`.
+
+> Update (2025-11-10): Fixed `ja:detectable_content:postscript` to correctly handle `P.P.S.` markers that include a trailing dot and optional internal spacing (e.g., `"P. P. S."`). Previously, only `P.P.S` (no trailing dot) had a flexible pattern; with `P.P.S.` the checker matched only the exact literal without spaces, leading to false negatives for inputs like row 38 of `data/ja_input_data.jsonl`. Tests added in `tests/test_postscript_marker_consistency.py` cover these cases.
+
 ## Table of Contents
 - [**🏆 Leader board**](#-leader-board)
 - [**⚙️ How to run**](#️-how-to-run)  

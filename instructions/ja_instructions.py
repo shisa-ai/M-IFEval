@@ -667,7 +667,11 @@ class PostscriptChecker(Instruction):
       the keyword containing in the `instruction_args`; otherwise False.
     """
     if self._postscript_marker == "P.P.S":
+      # Historically allowed without enforcing final dot; keep backward compat.
       postscript_pattern = r"\s*p\.\s?p\.\s?s.*$"
+    elif self._postscript_marker == "P.P.S.":
+      # Accept optional spaces and require the trailing dot after 'S.'
+      postscript_pattern = r"\s*p\.\s?p\.\s?s\.\s?.*$"
     elif self._postscript_marker == "P.S.":
       postscript_pattern = r"\s*p\.\s?s\..*$"
     else:
@@ -772,12 +776,18 @@ class KeywordChecker(Instruction):
     return ["keywords"]
 
   def check_following(self, value):
-    """Check if the response contain the expected keywords."""
-    tokens = ja_instructions_util.tokenizing_texts(value)
-    val_words = [token.surface for token in tokens]
+    """Check if the response contains the expected keywords as substrings.
 
+    This uses simple substring matching to avoid false negatives from
+    morphological tokenization (e.g., Janome splitting "創造性" into
+    separate tokens). All keywords must appear at least once in the raw
+    string value.
+    """
+    assert isinstance(value, str)
     for keyword in self._keywords:
-      if not keyword in val_words:
+      if not isinstance(keyword, str):
+        return False
+      if keyword not in value:
         return False
     return True
 
