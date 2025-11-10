@@ -39,6 +39,8 @@ M-IFEval currently supports **French**, **Japanese**, and **Spanish**, incorpora
 
 > Update (2025-11-10): Aligned keyword scripts for input data row 172. The prompt specifies たんぱく質 (hiragana), so the `keywords` kwarg was updated from `タンパク質` (katakana) to `たんぱく質` to match. This avoids false negatives in `ja:keywords:existence` which does literal substring matching.
 
+> Update (2025-11-10): Updated `ja:keywords:frequency` to count keyword occurrences via substring matching (regex with `re.escape`) instead of relying on tokenization. This prevents false negatives when Japanese morphological analyzers split compounds (e.g., `大聖堂`). Tests added in `tests/test_keyword_frequency_substring.py`.
+
 ## Table of Contents
 - [**🏆 Leader board**](#-leader-board)
 - [**⚙️ How to run**](#️-how-to-run)  

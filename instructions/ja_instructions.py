@@ -849,11 +849,14 @@ class KeywordFrequencyChecker(Instruction):
     return ["keyword", "frequency", "relation"]
 
   def check_following(self, value):
-    """Checks if the response contain the keyword with required frequency."""
-    tokens = ja_instructions_util.tokenizing_texts(value)
-    val_words = [token.surface for token in tokens]
-    dict_val = collections.Counter(val_words)
-    actual_occurrences = dict_val[self._keyword]
+    """Checks if the response contains the keyword with required frequency.
+
+    Uses substring counting to avoid false negatives from morphological
+    tokenization (e.g., Janome splitting compounds).
+    """
+    assert isinstance(value, str)
+    pattern = re.escape(self._keyword)
+    actual_occurrences = len(re.findall(pattern, value))
 
     if self._comparison_relation == _COMPARISON_RELATION[0]:
       return actual_occurrences < self._frequency
