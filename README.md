@@ -31,6 +31,14 @@ M-IFEval currently supports **French**, **Japanese**, and **Spanish**, incorpora
 
 > Update (2025-11-10): Fixed `ja:detectable_content:postscript` to correctly handle `P.P.S.` markers that include a trailing dot and optional internal spacing (e.g., `"P. P. S."`). Previously, only `P.P.S` (no trailing dot) had a flexible pattern; with `P.P.S.` the checker matched only the exact literal without spaces, leading to false negatives for inputs like row 38 of `data/ja_input_data.jsonl`. Tests added in `tests/test_postscript_marker_consistency.py` cover these cases.
 
+> Update (2025-11-10): Improved `ja:length_constraints:nth_paragraph_first_word` to normalize leading formatting in the target paragraph before checking the first word. The checker now ignores common prefixes such as blockquotes (`>`), headings (`#`), list markers (`-`, `*`, `+`, `・`, numbered), leading emphasis/code markers (`**`, `*`, `__`, `_`, `` ` ``), full‑width/ASCII spaces, and Japanese opening quotes (`「『（(《〈`). See tests in `tests/test_paragraph_first_word_normalization.py`.
+
+> Update (2025-11-10): Enhanced `ja:startend:end_checker` to ignore trailing formatting-only markers (e.g., Markdown emphasis/code like `**`, `*`, `__`, `_`, `` ` ``) and trailing Japanese closing quotes when verifying the ending phrase. This makes responses like `**「…」**` valid when the specified end phrase is `「…」`. Covered by `tests/test_end_checker_trailing_format.py`.
+
+> Update (2025-11-10): Clarified the Japanese wording for the kanji-count constraint in input data row 102. The prompt now explicitly says “漢字は30文字未満に抑えて答えてください。” (keep kanji under 30 characters), matching the evaluation args `{relation: 未満, kanji_limit: 30}`.
+
+> Update (2025-11-10): Aligned keyword scripts for input data row 172. The prompt specifies たんぱく質 (hiragana), so the `keywords` kwarg was updated from `タンパク質` (katakana) to `たんぱく質` to match. This avoids false negatives in `ja:keywords:existence` which does literal substring matching.
+
 ## Table of Contents
 - [**🏆 Leader board**](#-leader-board)
 - [**⚙️ How to run**](#️-how-to-run)  

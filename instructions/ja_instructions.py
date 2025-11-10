@@ -1037,8 +1037,8 @@ class ParagraphFirstWordCheck(Instruction):
     else:
       return False
 
-    paragraph = paragraph.lstrip("「")
-    paragraph = paragraph.lstrip("『")
+    # Normalize leading formatting before comparing the first word.
+    paragraph = self._normalize_paragraph_start(paragraph)
 
     first_word = paragraph[:len(self._first_word)]
 
@@ -1046,6 +1046,35 @@ class ParagraphFirstWordCheck(Instruction):
         num_paragraphs == self._num_paragraphs
         and first_word == self._first_word
     )
+
+  def _normalize_paragraph_start(self, text):
+    """Strips common leading formatting markers for Japanese paragraphs.
+
+    Removes typical Markdown/list/quote markers and leading Japanese quotes
+    so that the logical first word can be compared robustly.
+    """
+    import re as _re
+
+    t = text.lstrip().lstrip("\u3000")
+
+    # Iteratively remove known prefixes until stable.
+    while True:
+      prev = t
+      # Blockquote markers (allow multiple)
+      t = _re.sub(r"^(?:>\s*)+", "", t)
+      # Headings (e.g., #, ##, ###)
+      t = _re.sub(r"^#{1,6}\s*", "", t)
+      # Unordered list markers (-, *, +, Japanese bullet ・)
+      t = _re.sub(r"^(?:[-*+]\s+|・\s*)", "", t)
+      # Numbered list markers (e.g., 1. foo, 2) foo)
+      t = _re.sub(r"^\d+[.)]\s+", "", t)
+      # Leading emphasis/code markers (** * __ _ `)
+      t = _re.sub(r"^(?:\*\*|__|\*|_|`)+", "", t)
+      # Leading Japanese quotes/brackets and parentheses
+      t = _re.sub(r'^[「『（(《〈]+', "", t)
+      if t == prev:
+        break
+    return t
 
 
 # TODO(jeffrey) add relation - at least/at most?
@@ -1319,8 +1348,17 @@ class EndChecker(Instruction):
 
   def check_following(self, value):
     """Checks if the response ends with the expected phrase."""
-    value = value.strip().strip("」』")
+    import re as _re
+    value = value.strip()
     self._end_phrase = self._end_phrase.strip().strip("」』")
+
+    # Normalize trailing formatting-only markers (e.g., Markdown emphasis/code)
+    # such as '**', '*', '__', '_', '`' and optional whitespace at the very end.
+    value = _re.sub(r"(?:\s*(?:\*\*|__|\*|_|`)+\s*)+$", "", value)
+
+    # After stripping markers, strip trailing Japanese closing quotes if present.
+    value = value.strip().strip("」』")
+
     return value.endswith(self._end_phrase)
 
   
