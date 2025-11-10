@@ -25,6 +25,7 @@ Quick overview of language-specific instructions implemented for Japanese, Frenc
 | Letters | Kansuuji | 数字を全て漢数字で表記してください。 |
 | Detectable Format | Nominal Endings | 応答の中で体言止めを{N}回は使用してください。 |
 | Detectable Format | Numbered Lists | 応答はちょうど {N} 個の番号付きリストで構成してください。以下のような番号付きリストの形を参考にしてください: 1. 一つめの内容 ... |
+| Detectable Format | Bullet Lists | 応答はちょうど {N} 個の箇条書きで構成してください。箇条書きの先頭記号として「・」「*」「-」のいずれも認められます。|
 
 日本語のプロンプトは3つのステップで作成されました。
 まず、Few-shotプロンプティングを用いて、この課題に適切なプロンプトを書くように教育しました。
@@ -72,4 +73,3 @@ Special Characters | Num_words: add words with tildes | Responde con al menos/co
 Special Characters | Letter Frequency (ü) | En tu respuesta, palabras con la letra "ü" deben aparecer {N} veces. | In your response, words with the letter "ü" should appear {N} times. |
 Punctuation | Interrogation marks | Tu respuesta debe incluir al menos una pregunta. | Your response must express at least one question. |
 Punctuation | Exclamation marks | Tu respuesta debe incluir al menos una exclamación. | Your response must express at least one exclamation. |
-

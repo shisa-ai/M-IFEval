@@ -320,15 +320,22 @@ class BulletListChecker(Instruction):
     r"""Check if the number of bullet lists meets the requirement.
 
     Args:
-      value: A string representing the response. The response is expected to
-        contain some bullet lists that start with `・`.
+      value: A string representing the response. The response may contain
+        bullet lists that start with `・`, `*`, or `-`.
 
     Returns:
       True if the actual number of bullet lists in the response meets the
       requirement.
     """
-    bullet_lists = re.findall(r"^\s*・[^\・].*$", value, flags=re.MULTILINE)
-    num_bullet_lists = len(bullet_lists)
+    # Accept Japanese bullet '・' as well as Markdown '*' and '-'
+    bullet_lists_jp = re.findall(r"^\s*・.*$", value, flags=re.MULTILINE)
+    # Avoid counting bold '**' as a bullet by ensuring a single leading '*'
+    bullet_lists_star = re.findall(r"^\s*\*[^\*].*$", value, flags=re.MULTILINE)
+    # Prefer a space after '-' to avoid matching horizontal rules like '---'
+    bullet_lists_dash = re.findall(r"^\s*-\s+.*$", value, flags=re.MULTILINE)
+    num_bullet_lists = (
+        len(bullet_lists_jp) + len(bullet_lists_star) + len(bullet_lists_dash)
+    )
     return num_bullet_lists == self._num_bullets
 
 
