@@ -3,9 +3,10 @@
 ## How to Install
 Run the typical pip install -r requirements.txt.
 Also run 
-  > python -m spacy download es_core_news_sm --quiet
-  > python -m spacy download xx_sent_ud_sm --quiet
-Because it uses them for some of the NLP processing.
+```
+python -m spacy download es_core_news_sm --quiet
+python -m spacy download xx_sent_ud_sm --quiet
+```
 
 ## How To Run
 Easiest way to run is to define a config file (ie shisa-unphi.yaml) and run shisa_run_eval.py, which will do all the running and judging in one step.
@@ -60,9 +61,7 @@ The prompt now explicitly says “漢字は30文字未満に抑えて答えて�
 
 
 
-# Below is the Original Repo Instructions, You Shouldn't Need to Read This 
-
-## How to add a new model. 
+# Below is the Original Repo Readme. You Shouldn't Need to Read This 
 
 # M-IFEval: Multilingual Instruction Following Evaluation
 <span style="display: inline; gap: 5px;">
