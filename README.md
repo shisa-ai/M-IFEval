@@ -7,6 +7,61 @@ Also run
   > python -m spacy download xx_sent_ud_sm --quiet
 Because it uses them for some of the NLP processing.
 
+## How To Run
+Easiest way to run is to define a config file (ie shisa-unphi.yaml) and run shisa_run_eval.py, which will do all the running and judging in one step.
+You can run 
+```
+python3 shisa_run_eval.py --config configs/shisa-unphi.yaml
+```
+to run tests for all languages.
+If you are only interested in Japanese (which presumably you are), you can run 
+```
+python3 shisa_run_eval.py --config configs/shisa-unphi.yaml --languages ja
+```
+
+You can also override many command line arguments even with a specified config file. The most common one is a model override, IE:
+```
+python3 shisa_run_eval.py --config configs/shisa-unphi.yaml --languages ja --model shisa-ai/chotto-14b-20251013-dpo-W8A8-INT8-smooth
+```
+
+## How to View Results
+
+You can view results in a textual interface by running 
+```
+python3 mifeval-viewer.py
+```
+
+
+## What we Changed
+
+### Fixed a whole bunch of bugs and added tests. 
+
+#### Fixed Tokenizer Bug That Made Tests Impossible to Clear
+* Update (2025-11-10): The Japanese keyword existence checker (`ja:keywords:existence`) now uses simple substring matching instead of token-surface matching to avoid false negatives caused by morphological splitting (e.g., Janome splitting “創造性” into “創造”+“性”). A regression test was added at `tests/test_keyword_existence_tokenization.py`.
+* Update (2025-11-10): Updated `ja:keywords:frequency` to count keyword occurrences via substring matching (regex with `re.escape`) instead of relying on tokenization. This prevents false negatives when Japanese morphological analyzers split compounds (e.g., `大聖堂`). Tests added in `tests/test_keyword_frequency_substring.py`.
+* Update (2025-11-10): Updated `ja:keywords:forbidden_words` to use substring matching instead of token-surface matching (Janome). This ensures compounds and decorated text are properly flagged without depending on morphological splits. Covered by `tests/test_forbidden_words_substring.py`.
+
+#### Fixed Mismatch Between Kwarg and JA_Instructions.py that was Causing Tests to Fail
+* Update (2025-11-10): Fixed `ja:detectable_content:postscript` to correctly handle `P.P.S.` markers that include a trailing dot and optional internal spacing (e.g., `"P. P. S."`). ja_instructions.py contains a special if branch that was supposed to match this, but there was a difference between the kwarg and the if statement that was causing the branch to never be reached. 
+
+#### Fixed Mismatch Between Kwarg and Prompt in Test 172 
+* Update (2025-11-10): Aligned keyword scripts for input data row 172. The prompt specifies たんぱく質 (hiragana), so the `keywords` kwarg was updated from `タンパク質` (katakana) to `たんぱく質` to match. This avoids false negatives in `ja:keywords:existence` which does literal substring matching.
+
+#### Fixed Ambiguous Japanese in Prompt 102
+* Update (2025-11-10): Clarified the Japanese wording for the kanji-count constraint in input data row 102. The original prompt was "30文字以上は漢字を用いずに、答えてください。", which was ambiguous, translating to something like "For more than 30 characters, don't use kanji..."
+The prompt now explicitly says “漢字は30文字未満に抑えて答えてください。” (keep kanji under 30 characters), matching the evaluation args `{relation: 未満, kanji_limit: 30}`.
+
+#### Added More Leeway To Catch Valid Cases That Were Failing Too-Strict Checks
+* Update (2025-11-10): Improved `ja:length_constraints:nth_paragraph_first_word` to normalize leading formatting in the target paragraph before checking the first word. The checker now ignores common prefixes such as blockquotes (`>`), headings (`#`), list markers (`-`, `*`, `+`, `・`, numbered), leading emphasis/code markers (`**`, `*`, `__`, `_`, `` ` ``), full‑width/ASCII spaces, and Japanese opening quotes (`「『（(《〈`). See tests in `tests/test_paragraph_first_word_normalization.py`.
+* Update (2025-11-10): Enhanced `ja:startend:end_checker` to ignore trailing formatting-only markers (e.g., Markdown emphasis/code like `**`, `*`, `__`, `_`, `` ` ``) and trailing Japanese closing quotes when verifying the ending phrase. This makes responses like `**「…」**` valid when the specified end phrase is `「…」`. Covered by `tests/test_end_checker_trailing_format.py`.
+* Update (2025-11-10): Updated `ja:detectable_format:number_bullet_lists` to allow for bullet lists with markdown format as opposed to only allowing for bullet lists with the Japanese bullet character. Covered by 'tests/test_number_bullet_checker_jp.py
+
+
+
+
+
+# Below is the Original Repo Instructions, You Shouldn't Need to Read This 
+
 ## How to add a new model. 
 
 # M-IFEval: Multilingual Instruction Following Evaluation
@@ -27,16 +82,6 @@ Building upon the [Instruction Following Evaluation for Large Language Models](h
 
 M-IFEval currently supports **French**, **Japanese**, and **Spanish**, incorporating both general and language-specific instructions to provide a more comprehensive assessment of multilingual instruction adherence.
 
-> Update (2025-11-10): The Japanese keyword existence checker (`ja:keywords:existence`) now uses simple substring matching instead of token-surface matching to avoid false negatives caused by morphological splitting (e.g., Janome splitting “創造性” into “創造”+“性”). A regression test was added at `tests/test_keyword_existence_tokenization.py`.
-
-> Update (2025-11-10): Fixed `ja:detectable_content:postscript` to correctly handle `P.P.S.` markers that include a trailing dot and optional internal spacing (e.g., `"P. P. S."`). Previously, only `P.P.S` (no trailing dot) had a flexible pattern; with `P.P.S.` the checker matched only the exact literal without spaces, leading to false negatives for inputs like row 38 of `data/ja_input_data.jsonl`. Tests added in `tests/test_postscript_marker_consistency.py` cover these cases.
-> Update (2025-11-10): Improved `ja:length_constraints:nth_paragraph_first_word` to normalize leading formatting in the target paragraph before checking the first word. The checker now ignores common prefixes such as blockquotes (`>`), headings (`#`), list markers (`-`, `*`, `+`, `・`, numbered), leading emphasis/code markers (`**`, `*`, `__`, `_`, `` ` ``), full‑width/ASCII spaces, and Japanese opening quotes (`「『（(《〈`). See tests in `tests/test_paragraph_first_word_normalization.py`.
-> Update (2025-11-10): Enhanced `ja:startend:end_checker` to ignore trailing formatting-only markers (e.g., Markdown emphasis/code like `**`, `*`, `__`, `_`, `` ` ``) and trailing Japanese closing quotes when verifying the ending phrase. This makes responses like `**「…」**` valid when the specified end phrase is `「…」`. Covered by `tests/test_end_checker_trailing_format.py`.
-> Update (2025-11-10): Clarified the Japanese wording for the kanji-count constraint in input data row 102. The prompt now explicitly says “漢字は30文字未満に抑えて答えてください。” (keep kanji under 30 characters), matching the evaluation args `{relation: 未満, kanji_limit: 30}`.
-> Update (2025-11-10): Aligned keyword scripts for input data row 172. The prompt specifies たんぱく質 (hiragana), so the `keywords` kwarg was updated from `タンパク質` (katakana) to `たんぱく質` to match. This avoids false negatives in `ja:keywords:existence` which does literal substring matching.
-> Update (2025-11-10): Updated `ja:keywords:frequency` to count keyword occurrences via substring matching (regex with `re.escape`) instead of relying on tokenization. This prevents false negatives when Japanese morphological analyzers split compounds (e.g., `大聖堂`). Tests added in `tests/test_keyword_frequency_substring.py`.
-> Update (2025-11-10): Updated `ja:keywords:forbidden_words` to use substring matching instead of token-surface matching (Janome). This ensures compounds and decorated text are properly flagged without depending on morphological splits. Covered by `tests/test_forbidden_words_substring.py`.
-> Update (2025-11-10): Updated `ja:detectable_format:number_bullet_lists` to allow for bullet lists with markdown format as opposed to only allowing for bullet lists with the Japanese bullet character. Covered by 'tests/test_number_bullet_checker_jp.py
 
 
 ## Table of Contents
