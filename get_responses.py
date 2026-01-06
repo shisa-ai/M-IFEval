@@ -136,7 +136,8 @@ class OpenaiResponseGenerator(ResponseGenerator):
 
 class OpenaiCompatibleResponseGenerator(ResponseGenerator):
     def __init__(self, model_name, base_url="http://localhost:8000/v1", api_key="EMPTY",
-                 temperature=0.0, top_p=1.0, reasoning_effort=None, max_tokens=2048, repetition_penalty=None):
+                 temperature=0.0, top_p=1.0, reasoning_effort=None, max_tokens=2048, repetition_penalty=None,
+                 workers=15):
         from openai import OpenAI
 
         # Use passed parameters, only fall back to env vars if not provided
@@ -171,6 +172,7 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
         self.reasoning_effort = reasoning_effort
         self.max_tokens = max_tokens
         self.repetition_penalty = repetition_penalty
+        self.workers = max(1, int(workers)) if workers is not None else 15
 
     @backoff.on_exception(
         backoff.expo,
@@ -323,7 +325,7 @@ class OpenaiCompatibleResponseGenerator(ResponseGenerator):
         responses = [None] * len(input_texts)
         failed_indices = []
 
-        with ThreadPoolExecutor(max_workers=15) as executor:
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
             # Submit all tasks and map them to their indices
             future_to_idx = {
                 executor.submit(self.get_single_response, text): idx
@@ -470,6 +472,8 @@ if __name__ == "__main__":
                         help="Repetition penalty (1.0 = no penalty, higher values penalize repetition)")
     parser.add_argument("--max_tokens", type=int, default=2048,
                         help="Maximum tokens in response (default: 2048)")
+    parser.add_argument("--workers", type=int, default=15,
+                        help="Max parallel requests for openai_compatible provider (default: 15)")
 
     args = parser.parse_args()
 
@@ -520,7 +524,8 @@ if __name__ == "__main__":
             top_p=args.top_p,
             reasoning_effort=args.reasoning_effort,
             max_tokens=args.max_tokens,
-            repetition_penalty=args.repetition_penalty
+            repetition_penalty=args.repetition_penalty,
+            workers=args.workers,
         )
     else:
         response_generator = model_class(model_name)

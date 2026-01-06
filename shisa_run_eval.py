@@ -103,6 +103,8 @@ def merge_config_and_args(config: Dict[str, Any], args: argparse.Namespace) -> a
             args.languages = ",".join(languages) if isinstance(languages, list) else languages
     if args.output_dir is None:
         args.output_dir = config.get("output_dir", "./evaluation/")
+    if args.workers is None:
+        args.workers = config.get("workers")
 
     return args
 
@@ -143,6 +145,8 @@ def main():
                         help="Repetition penalty (1.0 = no penalty, higher values penalize repetition)")
     parser.add_argument("--max_tokens", type=int, default=None,
                         help="Maximum tokens in response (default: 2048, or from config)")
+    parser.add_argument("--workers", type=int, default=None,
+                        help="Max parallel requests for openai_compatible provider (default: 15)")
 
     # Evaluation configuration
     parser.add_argument("--languages", type=str, default=None,
@@ -188,6 +192,8 @@ def main():
         args.top_p = 1.0
     if args.max_tokens is None:
         args.max_tokens = 2048
+    if args.workers is None:
+        args.workers = 15
     # reasoning_effort defaults to None (not all models support it)
 
     # Validate required arguments
@@ -251,6 +257,9 @@ def main():
         # Only add repetition_penalty if specified (some models don't support it)
         if args.repetition_penalty is not None:
             generate_cmd.extend(["--repetition_penalty", str(args.repetition_penalty)])
+
+        if args.workers is not None:
+            generate_cmd.extend(["--workers", str(args.workers)])
 
         # Debug: print the command being run
         print(f"DEBUG: Running command: {' '.join(generate_cmd)}")
