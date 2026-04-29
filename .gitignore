@@ -164,5 +164,4 @@ cython_debug/
 .DS_Store
 
 # (Shisa) User-Added
-response_debug.txtdata/
-scores/
+response_debug.txt
