@@ -1,0 +1,74 @@
+{
+  "strict": {
+    "prompt_level_accuracy": 0.2698706099815157,
+    "instruction_level_accuracy": 0.4148681055155875,
+    "tier0_scores": {
+      "en": 0.4148681055155875
+    },
+    "tier1_scores": {
+      "en:punctuation:no_comma": 0.0,
+      "en:detectable_format:number_highlighted_sections": 0.9583333333333334,
+      "en:length_constraints:number_words": 0.6538461538461539,
+      "en:detectable_content:number_placeholders": 1.0,
+      "en:combination:repeat_prompt": 0.0,
+      "en:detectable_format:title": 1.0,
+      "en:change_case:english_lowercase": 0.0,
+      "en:detectable_format:number_bullet_lists": 0.0,
+      "en:change_case:english_capital": 0.0,
+      "en:detectable_format:multiple_sections": 1.0,
+      "en:change_case:capital_word_frequency": 0.72,
+      "en:startend:quotation": 0.0,
+      "en:keywords:existence": 1.0,
+      "en:detectable_format:json_format": 0.0,
+      "en:length_constraints:number_paragraphs": 0.0,
+      "en:combination:two_responses": 0.041666666666666664,
+      "en:language:response_language": 0.1935483870967742,
+      "en:keywords:letter_frequency": 0.6666666666666666,
+      "en:startend:end_checker": 0.4230769230769231,
+      "en:keywords:forbidden_words": 0.0,
+      "en:keywords:frequency": 0.7380952380952381,
+      "en:length_constraints:number_sentences": 0.46153846153846156,
+      "en:detectable_content:postscript": 1.0,
+      "en:length_constraints:nth_paragraph_first_word": 0.0,
+      "en:detectable_format:constrained_response": 1.0
+    },
+    "total_prompts": 541,
+    "total_instructions": 834
+  },
+  "loose": {
+    "prompt_level_accuracy": 0.2754158964879852,
+    "instruction_level_accuracy": 0.4184652278177458,
+    "tier0_scores": {
+      "en": 0.4184652278177458
+    },
+    "tier1_scores": {
+      "en:punctuation:no_comma": 0.0,
+      "en:detectable_format:number_highlighted_sections": 0.9583333333333334,
+      "en:length_constraints:number_words": 0.6538461538461539,
+      "en:detectable_content:number_placeholders": 1.0,
+      "en:combination:repeat_prompt": 0.0,
+      "en:detectable_format:title": 1.0,
+      "en:change_case:english_lowercase": 0.0,
+      "en:detectable_format:number_bullet_lists": 0.0,
+      "en:change_case:english_capital": 0.04,
+      "en:detectable_format:multiple_sections": 1.0,
+      "en:change_case:capital_word_frequency": 0.72,
+      "en:startend:quotation": 0.024390243902439025,
+      "en:keywords:existence": 1.0,
+      "en:detectable_format:json_format": 0.0,
+      "en:length_constraints:number_paragraphs": 0.0,
+      "en:combination:two_responses": 0.041666666666666664,
+      "en:language:response_language": 0.1935483870967742,
+      "en:keywords:letter_frequency": 0.6666666666666666,
+      "en:startend:end_checker": 0.46153846153846156,
+      "en:keywords:forbidden_words": 0.0,
+      "en:keywords:frequency": 0.7380952380952381,
+      "en:length_constraints:number_sentences": 0.46153846153846156,
+      "en:detectable_content:postscript": 1.0,
+      "en:length_constraints:nth_paragraph_first_word": 0.0,
+      "en:detectable_format:constrained_response": 1.0
+    },
+    "total_prompts": 541,
+    "total_instructions": 834
+  }
+}
