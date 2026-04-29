@@ -289,6 +289,8 @@ def main():
     # Parse languages
     lang_codes = [lang.strip() for lang in args.languages.split(",")]
 
+    had_error = False
+
     for lang in lang_codes:
         input_data = f"./data/{lang}_input_data.jsonl"
         response_data = f"./data/{lang}_input_response_data_{safe_model_name}.jsonl"
@@ -315,8 +317,14 @@ def main():
 
         if result.returncode != 0:
             print(f"❌ Error evaluating {lang}")
+            had_error = True
         else:
             print(f"✓ {lang.upper()} evaluation complete")
+
+    if had_error:
+        print()
+        print("⚠️  One or more language evaluations failed. See logs above for details.")
+        sys.exit(1)
 
     print()
     print("=" * 80)
