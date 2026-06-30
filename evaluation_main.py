@@ -190,13 +190,28 @@ def test_instruction_following_loose(
   )
 
 
+def _strip_reasoning(text):
+  """Remove <think>...</think> reasoning blocks from a response string.
+
+  Reasoning models emit a <think> block before their answer; the instruction
+  checks must score the answer only, not the reasoning. Removes complete pairs
+  and a dangling unclosed tag; idempotent and a no-op when no tag is present.
+  """
+  import re
+  if not isinstance(text, str) or "<think" not in text.lower():
+    return text
+  text = re.sub(r"<think\b[^>]*>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
+  text = re.sub(r"<think\b[^>]*>.*\Z", "", text, flags=re.DOTALL | re.IGNORECASE)
+  return text.strip()
+
+
 def read_prompt_to_response_dict(input_jsonl_filename):
   """Creates dictionary matching prompt and response."""
   return_dict = {}
   with open(input_jsonl_filename, "r", encoding='utf-8') as f:
     for l in f:
       example = json.loads(l)
-      return_dict[example["prompt"]] = example["response"]
+      return_dict[example["prompt"]] = _strip_reasoning(example["response"])
   return return_dict
 
 
