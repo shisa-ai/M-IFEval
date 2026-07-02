@@ -1,9 +1,9 @@
 {
   "strict": {
-    "prompt_level_accuracy": 0.634011090573013,
-    "instruction_level_accuracy": 0.7302158273381295,
+    "prompt_level_accuracy": 0.6321626617375231,
+    "instruction_level_accuracy": 0.7290167865707434,
     "tier0_scores": {
-      "en": 0.7302158273381295
+      "en": 0.7290167865707434
     },
     "tier1_scores": {
       "en:punctuation:no_comma": 0.6818181818181818,
@@ -11,7 +11,7 @@
       "en:length_constraints:number_words": 0.6923076923076923,
       "en:detectable_content:number_placeholders": 0.9259259259259259,
       "en:combination:repeat_prompt": 0.3902439024390244,
-      "en:detectable_format:title": 0.972972972972973,
+      "en:detectable_format:title": 0.9459459459459459,
       "en:change_case:english_lowercase": 0.717948717948718,
       "en:detectable_format:number_bullet_lists": 0.7096774193548387,
       "en:change_case:english_capital": 0.48,
@@ -36,10 +36,10 @@
     "total_instructions": 834
   },
   "loose": {
-    "prompt_level_accuracy": 0.6894639556377079,
-    "instruction_level_accuracy": 0.7757793764988009,
+    "prompt_level_accuracy": 0.6857670979667283,
+    "instruction_level_accuracy": 0.7733812949640287,
     "tier0_scores": {
-      "en": 0.7757793764988009
+      "en": 0.7733812949640287
     },
     "tier1_scores": {
       "en:punctuation:no_comma": 0.7272727272727273,
@@ -47,7 +47,7 @@
       "en:length_constraints:number_words": 0.7307692307692307,
       "en:detectable_content:number_placeholders": 0.9259259259259259,
       "en:combination:repeat_prompt": 0.6097560975609756,
-      "en:detectable_format:title": 0.972972972972973,
+      "en:detectable_format:title": 0.9459459459459459,
       "en:change_case:english_lowercase": 0.7435897435897436,
       "en:detectable_format:number_bullet_lists": 0.8064516129032258,
       "en:change_case:english_capital": 0.56,
@@ -58,7 +58,7 @@
       "en:detectable_format:json_format": 0.7647058823529411,
       "en:length_constraints:number_paragraphs": 0.7777777777777778,
       "en:combination:two_responses": 0.7083333333333334,
-      "en:language:response_language": 0.7741935483870968,
+      "en:language:response_language": 0.7419354838709677,
       "en:keywords:letter_frequency": 0.696969696969697,
       "en:startend:end_checker": 0.8846153846153846,
       "en:keywords:forbidden_words": 0.673469387755102,

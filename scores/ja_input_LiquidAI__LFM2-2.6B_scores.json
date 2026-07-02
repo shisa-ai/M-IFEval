@@ -1,9 +1,9 @@
 {
   "strict": {
-    "prompt_level_accuracy": 0.37790697674418605,
-    "instruction_level_accuracy": 0.4557522123893805,
+    "prompt_level_accuracy": 0.37209302325581395,
+    "instruction_level_accuracy": 0.45132743362831856,
     "tier0_scores": {
-      "ja": 0.4557522123893805
+      "ja": 0.45132743362831856
     },
     "tier1_scores": {
       "ja:language:response_language": 0.5,
@@ -29,7 +29,7 @@
       "ja:keywords:letter_frequency": 0.8,
       "ja:letters:furigana": 0.0,
       "ja:punctuation:no_period": 0.2857142857142857,
-      "ja:punctuation:no_comma": 0.7142857142857143,
+      "ja:punctuation:no_comma": 0.5714285714285714,
       "ja:startend:quotation": 0.14285714285714285,
       "ja:letters:kanji": 0.5714285714285714,
       "ja:letters:no_hiragana": 0.14285714285714285,
@@ -44,10 +44,10 @@
     "total_instructions": 226
   },
   "loose": {
-    "prompt_level_accuracy": 0.4186046511627907,
-    "instruction_level_accuracy": 0.5088495575221239,
+    "prompt_level_accuracy": 0.4127906976744186,
+    "instruction_level_accuracy": 0.504424778761062,
     "tier0_scores": {
-      "ja": 0.5088495575221239
+      "ja": 0.504424778761062
     },
     "tier1_scores": {
       "ja:language:response_language": 0.5,
@@ -73,7 +73,7 @@
       "ja:keywords:letter_frequency": 1.0,
       "ja:letters:furigana": 0.0,
       "ja:punctuation:no_period": 0.42857142857142855,
-      "ja:punctuation:no_comma": 0.7142857142857143,
+      "ja:punctuation:no_comma": 0.5714285714285714,
       "ja:startend:quotation": 0.2857142857142857,
       "ja:letters:kanji": 0.8571428571428571,
       "ja:letters:no_hiragana": 0.14285714285714285,

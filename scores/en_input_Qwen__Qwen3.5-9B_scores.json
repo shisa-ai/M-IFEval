@@ -1,6 +1,6 @@
 {
   "strict": {
-    "prompt_level_accuracy": 0.2920517560073937,
+    "prompt_level_accuracy": 0.2902033271719039,
     "instruction_level_accuracy": 0.4304556354916067,
     "tier0_scores": {
       "en": 0.4304556354916067
@@ -36,10 +36,10 @@
     "total_instructions": 834
   },
   "loose": {
-    "prompt_level_accuracy": 0.29390018484288355,
-    "instruction_level_accuracy": 0.4316546762589928,
+    "prompt_level_accuracy": 0.2920517560073937,
+    "instruction_level_accuracy": 0.43285371702637887,
     "tier0_scores": {
-      "en": 0.4316546762589928
+      "en": 0.43285371702637887
     },
     "tier1_scores": {
       "en:punctuation:no_comma": 0.0,
@@ -59,7 +59,7 @@
       "en:length_constraints:number_paragraphs": 0.0,
       "en:combination:two_responses": 0.08333333333333333,
       "en:language:response_language": 0.2903225806451613,
-      "en:keywords:letter_frequency": 0.6363636363636364,
+      "en:keywords:letter_frequency": 0.6666666666666666,
       "en:startend:end_checker": 0.7307692307692307,
       "en:keywords:forbidden_words": 0.0,
       "en:keywords:frequency": 0.7380952380952381,

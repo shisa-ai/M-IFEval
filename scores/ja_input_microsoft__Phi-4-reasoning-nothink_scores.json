@@ -1,9 +1,9 @@
 {
   "strict": {
     "prompt_level_accuracy": 0.19186046511627908,
-    "instruction_level_accuracy": 0.24778761061946902,
+    "instruction_level_accuracy": 0.24336283185840707,
     "tier0_scores": {
-      "ja": 0.24778761061946902
+      "ja": 0.24336283185840707
     },
     "tier1_scores": {
       "ja:language:response_language": 0.0,
@@ -15,13 +15,13 @@
       "ja:detectable_format:number_highlighted_sections": 0.42857142857142855,
       "ja:detectable_format:multiple_sections": 0.8571428571428571,
       "ja:length_constraints:number_paragraphs": 0.0,
-      "ja:detectable_content:postscript": 1.0,
+      "ja:detectable_content:postscript": 0.7142857142857143,
       "ja:keywords:existence": 0.8571428571428571,
       "ja:keywords:frequency": 0.2857142857142857,
       "ja:length_constraints:number_letters": 0.5714285714285714,
       "ja:detectable_format:json_format": 0.0,
       "ja:length_constraints:nth_paragraph_first_word": 0.0,
-      "ja:keywords:forbidden_words": 0.0,
+      "ja:keywords:forbidden_words": 0.14285714285714285,
       "ja:combination:two_responses": 0.0,
       "ja:combination:repeat_prompt": 0.0,
       "ja:startend:end_checker": 0.0,
@@ -45,9 +45,9 @@
   },
   "loose": {
     "prompt_level_accuracy": 0.21511627906976744,
-    "instruction_level_accuracy": 0.3053097345132743,
+    "instruction_level_accuracy": 0.3008849557522124,
     "tier0_scores": {
-      "ja": 0.3053097345132743
+      "ja": 0.3008849557522124
     },
     "tier1_scores": {
       "ja:language:response_language": 0.0,
@@ -59,13 +59,13 @@
       "ja:detectable_format:number_highlighted_sections": 0.42857142857142855,
       "ja:detectable_format:multiple_sections": 0.8571428571428571,
       "ja:length_constraints:number_paragraphs": 0.14285714285714285,
-      "ja:detectable_content:postscript": 1.0,
+      "ja:detectable_content:postscript": 0.7142857142857143,
       "ja:keywords:existence": 0.8571428571428571,
       "ja:keywords:frequency": 0.2857142857142857,
       "ja:length_constraints:number_letters": 0.5714285714285714,
       "ja:detectable_format:json_format": 0.0,
       "ja:length_constraints:nth_paragraph_first_word": 0.0,
-      "ja:keywords:forbidden_words": 0.0,
+      "ja:keywords:forbidden_words": 0.14285714285714285,
       "ja:combination:two_responses": 0.42857142857142855,
       "ja:combination:repeat_prompt": 0.0,
       "ja:startend:end_checker": 0.0,
